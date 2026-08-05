@@ -1,618 +1,238 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MaineCare Full Provider Directory</title>
-  <style>
-    :root {
-      --bg: #f1f5f9;
-      --card: #ffffff;
-      --text: #0f172a;
-      --muted: #64748b;
-      --border: #e2e8f0;
-      --blue: #2563eb;
-      --blue-hover: #1d4ed8;
-      --green: #059669;
-      --green-hover: #047857;
-      --dark: #1e293b;
-      --dark-hover: #0f172a;
-      --danger-bg: #fef2f2;
-      --danger-text: #b91c1c;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); }
-    .page { max-width: 1320px; margin: 0 auto; padding: 24px; }
-    h1 { margin: 0 0 6px; font-size: 32px; line-height: 1.2; }
-    .subtitle { color: var(--muted); margin: 0 0 22px; }
-    .card { background: var(--card); border-radius: 18px; box-shadow: 0 1px 4px rgba(15,23,42,0.08); padding: 18px; margin-bottom: 18px; }
-    .button-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    button { border: 0; border-radius: 12px; padding: 10px 14px; font-weight: 700; cursor: pointer; background: #e2e8f0; color: var(--text); }
-    button:disabled { cursor: not-allowed; opacity: 0.55; }
-    .primary { background: var(--blue); color: #fff; }
-    .primary:hover:not(:disabled) { background: var(--blue-hover); }
-    .dark { background: var(--dark); color: #fff; }
-    .dark:hover:not(:disabled) { background: var(--dark-hover); }
-    .green { background: var(--green); color: #fff; }
-    .green:hover:not(:disabled) { background: var(--green-hover); }
-    .alert { margin-top: 14px; padding: 12px; border-radius: 12px; background: var(--danger-bg); color: var(--danger-text); border: 1px solid #fecaca; display: none; }
-    .loading { margin-top: 14px; padding: 12px; border-radius: 12px; background: #eff6ff; color: #1d4ed8; display: none; }
-    .stats-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-    .stat-card { background: #fff; border-radius: 18px; padding: 16px; box-shadow: 0 1px 4px rgba(15,23,42,0.08); }
-    .stat-label { color: var(--muted); font-size: 13px; }
-    .stat-number { font-size: 24px; font-weight: 800; margin: 4px 0 10px; }
-    .stat-actions { display: flex; gap: 8px; }
-    .stat-actions button { padding: 7px 10px; font-size: 12px; }
-    .filters { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 14px; }
-    label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; color: #334155; }
-    input, select { width: 100%; padding: 10px 11px; border: 1px solid #cbd5e1; border-radius: 12px; outline: none; background: #fff; }
-    input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
-    .summary { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
-    .table-wrap { background: #fff; border-radius: 18px; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,0.08); }
-    .table-header, .row { display: grid; grid-template-columns: 3fr 1.4fr 2fr 2fr 2fr 0.8fr; gap: 10px; align-items: center; padding: 0 16px; }
-    .table-header { height: 48px; background: #e2e8f0; font-size: 13px; font-weight: 800; color: #334155; border-bottom: 1px solid var(--border); }
-    .scroller { height: 620px; overflow: auto; position: relative; }
-    .spacer { position: relative; }
-    .row-container { position: absolute; top: 0; left: 0; right: 0; }
-    .row { height: 72px; border-bottom: 1px solid var(--border); font-size: 14px; }
-    .row:hover { background: #f8fafc; }
-    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .small { font-size: 12px; color: var(--muted); }
-    .empty { padding: 34px; text-align: center; color: var(--muted); }
-    .drawer-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.35); display: none; justify-content: flex-end; z-index: 50; }
-    .drawer { width: min(720px, 100%); height: 100%; overflow-y: auto; background: #fff; padding: 24px; box-shadow: -8px 0 28px rgba(15,23,42,0.18); }
-    .drawer-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
-    .detail-card { background: #f8fafc; border-radius: 14px; padding: 14px; margin-bottom: 14px; }
-    .detail-card h3 { margin: 0 0 10px; }
-    .detail-line { font-size: 14px; margin: 5px 0; }
-    pre { background: #0f172a; color: #f8fafc; border-radius: 10px; padding: 12px; overflow: auto; font-size: 12px; }
-    @media (max-width: 980px) {
-      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .filters { grid-template-columns: 1fr; }
-      .table-header, .row { grid-template-columns: 2fr 1fr 1.4fr 1.4fr 1.4fr 0.8fr; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MaineCare Provider Lookup</title>
+<style>
+  :root {
+    --brand: #0b5fa5;
+    --brand-dark: #084576;
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1a202c;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    background: var(--brand);
+    color: #fff;
+    padding: 24px 20px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  header p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 24px 20px; }
+  .controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+  .controls input {
+    flex: 1;
+    min-width: 220px;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  .controls button {
+    padding: 11px 22px;
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .controls button:hover { background: var(--brand-dark); }
+  .controls button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .status { margin-bottom: 16px; color: var(--muted); font-size: 0.9rem; }
+  .grid { display: grid; gap: 14px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .card h3 { margin: 0 0 6px; font-size: 1.1rem; color: var(--brand-dark); }
+  .card .meta { font-size: 0.9rem; color: var(--muted); }
+  .badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 2px 9px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .badge.active { background: #dcfce7; color: #166534; }
+  .badge.inactive { background: #fee2e2; color: #991b1b; }
+  .error {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+    padding: 14px 16px;
+    border-radius: 8px;
+  }
+  footer { text-align: center; padding: 24px; color: var(--muted); font-size: 0.85rem; }
+</style>
 </head>
 <body>
-  <main class="page">
-    <header>
-      <h1>MaineCare Full Provider Directory</h1>
-      <p class="subtitle">Standalone browser app using MaineCare FHIR endpoints. No React build step required.</p>
-    </header>
+<header>
+  <h1>MaineCare Provider Lookup</h1>
+  <p>Search enrolled providers from the Maine Provider Directory (FHIR)</p>
+</header>
 
-    <section class="card">
-      <div class="button-row">
-        <button id="buildBtn" class="primary">Build Directory</button>
-        <button id="loadMoreAllBtn" class="dark" disabled>Load Next Page for All Resources</button>
-        <button id="exportBtn" class="green" disabled>Export CSV</button>
-        <button id="resetBtn">Reset Filters</button>
-      </div>
-      <div id="loadingBox" class="loading"></div>
-      <div id="errorBox" class="alert"></div>
-    </section>
-
-    <section id="statsGrid" class="stats-grid"></section>
-
-    <section class="card">
-      <div class="filters">
-        <div>
-          <label for="searchInput">Search name, NPI, specialty, organization, city, phone</label>
-          <input id="searchInput" placeholder="Example: cardiology, Portland, Smith, 1234567890" />
-        </div>
-        <div>
-          <label for="specialtyFilter">Specialty</label>
-          <select id="specialtyFilter"><option value="">All specialties</option></select>
-        </div>
-        <div>
-          <label for="organizationFilter">Organization</label>
-          <select id="organizationFilter"><option value="">All organizations</option></select>
-        </div>
-        <div>
-          <label for="cityFilter">City</label>
-          <select id="cityFilter"><option value="">All cities</option></select>
-        </div>
-      </div>
-    </section>
-
-    <section class="card summary">
-      <div>
-        <div class="stat-label">Directory Rows</div>
-        <div id="rowCount" class="stat-number">0</div>
-      </div>
-      <div class="small">Showing correlated provider, role, organization, and location data from loaded pages only.</div>
-    </section>
-
-    <section class="table-wrap">
-      <div class="table-header">
-        <div>Provider</div>
-        <div>NPI</div>
-        <div>Specialty</div>
-        <div>Organization</div>
-        <div>Location</div>
-        <div style="text-align:right">Details</div>
-      </div>
-      <div id="emptyState" class="empty">Click Build Directory to load the first page of each MaineCare FHIR endpoint.</div>
-      <div id="scroller" class="scroller" style="display:none">
-        <div id="spacer" class="spacer">
-          <div id="rowContainer" class="row-container"></div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <div id="drawerBackdrop" class="drawer-backdrop">
-    <aside class="drawer">
-      <div class="drawer-header">
-        <div>
-          <h2 id="drawerTitle" style="margin:0"></h2>
-          <p id="drawerSubtitle" class="subtitle" style="margin-top:4px"></p>
-        </div>
-        <button id="closeDrawerBtn">Close</button>
-      </div>
-      <div id="drawerContent"></div>
-    </aside>
+<div class="container">
+  <div class="controls">
+    <input id="searchBox" type="text" placeholder="Filter by provider name or city…" />
+    <button id="loadBtn">Load Providers</button>
   </div>
+  <div class="status" id="status">Click “Load Providers” to begin.</div>
+  <div class="grid" id="results"></div>
+</div>
 
-  <script>
-    const FHIR_BASE_URL = "https://maineproviderdirectory.verityanalytics.org/fhir";
-    const PAGE_SIZE = 50;
-    const ROW_HEIGHT = 72;
-    const VIEWPORT_HEIGHT = 620;
-    const BUFFER = 10;
+<footer>
+  Data via Maine Provider Directory FHIR endpoint · Proxied through Cloudflare Worker
+</footer>
 
-    const RESOURCE_CONFIG = {
-      Practitioner: { endpoint: 'Practitioner', label: 'Providers' },
-      PractitionerRole: { endpoint: 'PractitionerRole', label: 'Provider Roles' },
-      Organization: { endpoint: 'Organization', label: 'Organizations' },
-      Location: { endpoint: 'Location', label: 'Locations' },
-      OrganizationAffiliation: { endpoint: 'OrganizationAffiliation', label: 'Organization Affiliations' }
-    };
+<script>
+  // ---- CONFIG -------------------------------------------------------------
+  // Your Cloudflare Worker proxy base (no trailing slash).
+  // The Worker forwards everything after this to the real FHIR server.
+  const PROXY_BASE = "https://shiny-king-551f.weathered-math-22d4.workers.dev";
+  const PAGE_SIZE = 50;
+  // -------------------------------------------------------------------------
 
-    let rawData = {
-      Practitioner: [],
-      PractitionerRole: [],
-      Organization: [],
-      Location: [],
-      OrganizationAffiliation: []
-    };
+  let allProviders = [];
 
-    let nextUrls = {};
-    let directoryRows = [];
-    let filteredRows = [];
-    let scrollTop = 0;
-    let loading = false;
+  const statusEl = document.getElementById("status");
+  const resultsEl = document.getElementById("results");
+  const loadBtn = document.getElementById("loadBtn");
+  const searchBox = document.getElementById("searchBox");
 
-    const els = {
-      buildBtn: document.getElementById('buildBtn'),
-      loadMoreAllBtn: document.getElementById('loadMoreAllBtn'),
-      exportBtn: document.getElementById('exportBtn'),
-      resetBtn: document.getElementById('resetBtn'),
-      loadingBox: document.getElementById('loadingBox'),
-      errorBox: document.getElementById('errorBox'),
-      statsGrid: document.getElementById('statsGrid'),
-      searchInput: document.getElementById('searchInput'),
-      specialtyFilter: document.getElementById('specialtyFilter'),
-      organizationFilter: document.getElementById('organizationFilter'),
-      cityFilter: document.getElementById('cityFilter'),
-      rowCount: document.getElementById('rowCount'),
-      emptyState: document.getElementById('emptyState'),
-      scroller: document.getElementById('scroller'),
-      spacer: document.getElementById('spacer'),
-      rowContainer: document.getElementById('rowContainer'),
-      drawerBackdrop: document.getElementById('drawerBackdrop'),
-      closeDrawerBtn: document.getElementById('closeDrawerBtn'),
-      drawerTitle: document.getElementById('drawerTitle'),
-      drawerSubtitle: document.getElementById('drawerSubtitle'),
-      drawerContent: document.getElementById('drawerContent')
-    };
+  async function loadProviders() {
+    loadBtn.disabled = true;
+    statusEl.textContent = "Loading providers…";
+    resultsEl.innerHTML = "";
+    allProviders = [];
 
-    function escapeHtml(value) {
-      return String(value == null ? '' : value)
-        .split('&').join('&amp;')
-        .split('<').join('&lt;')
-        .split('>').join('&gt;')
-        .split('"').join('&quot;')
-        .split("'").join('&#039;');
-    }
+    // Follow FHIR pagination via the bundle's "next" link
+    let nextUrl = `${PROXY_BASE}/Organization?_count=${PAGE_SIZE}`;
 
-    async function fetchJson(url) {
-      const response = await fetch(url, { headers: { Accept: 'application/fhir+json' } });
-      if (!response.ok) throw new Error('Request failed: ' + response.status + ' ' + response.statusText);
-      return response.json();
-    }
-
-    function getResourceUrl(resourceType) {
-      return FHIR_BASE_URL + '/' + RESOURCE_CONFIG[resourceType].endpoint + '?_count=' + PAGE_SIZE;
-    }
-
-    function getNextUrl(bundle) {
-      var link = (bundle.link || []).find(function (l) { return l.relation === 'next'; });
-      return link ? link.url : null;
-    }
-
-    function removeDuplicates(resources) {
-      const seen = new Set();
-      return resources.filter(function (resource) {
-        const key = resource.resourceType + '/' + resource.id;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-    }
-
-    function normalizeRef(reference) {
-      if (!reference) return '';
-      return reference.includes('/') ? reference.split('/').pop() : reference;
-    }
-
-    function getHumanName(resource) {
-      const name = (resource && resource.name && resource.name[0]) || {};
-      return [].concat(name.prefix || [], name.given || [], name.family || [], name.suffix || [])
-        .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim() || 'Unknown Provider';
-    }
-
-    function getNpi(resource) {
-      if (!resource || !resource.identifier) return 'N/A';
-      var byNpiSystem = resource.identifier.find(function (i) { return i.system && i.system.toLowerCase().includes('npi'); });
-      if (byNpiSystem && byNpiSystem.value) return byNpiSystem.value;
-      var byNpiType = resource.identifier.find(function (i) { return i.type && i.type.coding && i.type.coding.some(function (c) { return c.code === 'NPI'; }); });
-      if (byNpiType && byNpiType.value) return byNpiType.value;
-      var anyValue = resource.identifier.find(function (i) { return i.value; });
-      return anyValue ? anyValue.value : 'N/A';
-    }
-
-    function getCodingText(items) {
-      return (items || []).map(function (item) {
-        return item.text || (item.coding || []).map(function (c) { return c.display || c.code; }).filter(Boolean).join(', ');
-      }).filter(Boolean).join(', ');
-    }
-
-    function formatTelecom(resource) {
-      const values = ((resource && resource.telecom) || []).filter(function (i) { return i.value; }).map(function (i) { return (i.system || 'contact') + ': ' + i.value; });
-      return values.length ? values.join('; ') : 'N/A';
-    }
-
-    function formatAddress(location) {
-      const address = location && location.address;
-      if (!address) return 'N/A';
-      return [].concat(address.line || [], address.city || [], address.state || [], address.postalCode || []).filter(Boolean).join(', ');
-    }
-
-    function setLoading(message) {
-      loading = Boolean(message);
-      els.loadingBox.style.display = message ? 'block' : 'none';
-      els.loadingBox.textContent = message || '';
-      updateButtonStates();
-    }
-
-    function setError(message) {
-      els.errorBox.style.display = message ? 'block' : 'none';
-      els.errorBox.textContent = message || '';
-    }
-
-    function updateButtonStates() {
-      const hasMore = Object.values(nextUrls).some(Boolean);
-      els.buildBtn.disabled = loading;
-      els.loadMoreAllBtn.disabled = loading || !hasMore;
-      els.exportBtn.disabled = filteredRows.length === 0;
-      els.resetBtn.disabled = loading;
-    }
-
-    function buildRows() {
-      const practitionersById = new Map(rawData.Practitioner.map(function (i) { return [i.id, i]; }));
-      const organizationsById = new Map(rawData.Organization.map(function (i) { return [i.id, i]; }));
-      const locationsById = new Map(rawData.Location.map(function (i) { return [i.id, i]; }));
-      const rows = [];
-
-      rawData.PractitionerRole.forEach(function (role) {
-        const practitionerId = normalizeRef(role.practitioner && role.practitioner.reference);
-        const organizationId = normalizeRef(role.organization && role.organization.reference);
-        const practitioner = practitionersById.get(practitionerId);
-        const organization = organizationsById.get(organizationId);
-        const locations = (role.location || []).map(function (ref) { return locationsById.get(normalizeRef(ref.reference)); }).filter(Boolean);
-        const specialties = getCodingText(role.specialty) || 'N/A';
-        const organizationName = (organization && organization.name) || (role.organization && role.organization.display) || 'N/A';
-
-        if (locations.length === 0) {
-          rows.push({
-            id: role.id + '-no-location', practitionerId: practitionerId, roleId: role.id,
-            providerName: practitioner ? getHumanName(practitioner) : ((role.practitioner && role.practitioner.display) || 'Unknown Provider'),
-            npi: practitioner ? getNpi(practitioner) : 'N/A', specialty: specialties,
-            organization: organizationName, organizationNpi: organization ? getNpi(organization) : 'N/A',
-            locationName: 'N/A', address: 'N/A', city: 'N/A', state: 'N/A', zip: 'N/A',
-            phone: formatTelecom(role), practitioner: practitioner, role: role, organization: organization, location: null
-          });
+    try {
+      while (nextUrl) {
+        const res = await fetch(nextUrl, {
+          headers: { "Accept": "application/fhir+json" }
+        });
+        if (!res.ok) {
+          throw new Error(`FHIR server returned ${res.status} ${res.statusText}`);
         }
+        const bundle = await res.json();
 
-        locations.forEach(function (location) {
-          rows.push({
-            id: role.id + '-' + location.id, practitionerId: practitionerId, roleId: role.id,
-            providerName: practitioner ? getHumanName(practitioner) : ((role.practitioner && role.practitioner.display) || 'Unknown Provider'),
-            npi: practitioner ? getNpi(practitioner) : 'N/A', specialty: specialties,
-            organization: organizationName, organizationNpi: organization ? getNpi(organization) : 'N/A',
-            locationName: location.name || 'N/A', address: formatAddress(location),
-            city: (location.address && location.address.city) || 'N/A', state: (location.address && location.address.state) || 'N/A', zip: (location.address && location.address.postalCode) || 'N/A',
-            phone: formatTelecom(location) !== 'N/A' ? formatTelecom(location) : formatTelecom(role),
-            practitioner: practitioner, role: role, organization: organization, location: location
+        (bundle.entry || []).forEach(e => {
+          const r = e.resource || {};
+          allProviders.push({
+            id: r.id || "",
+            name: r.name || "(Unnamed provider)",
+            active: r.active !== false,
+            city: (r.address && r.address[0] && r.address[0].city) || "",
+            state: (r.address && r.address[0] && r.address[0].state) || "",
+            npi: extractNpi(r.identifier)
           });
         });
-      });
 
-      if (rows.length === 0 && rawData.Practitioner.length > 0) {
-        rawData.Practitioner.forEach(function (practitioner) {
-          rows.push({
-            id: 'practitioner-' + practitioner.id, practitionerId: practitioner.id, roleId: 'N/A',
-            providerName: getHumanName(practitioner), npi: getNpi(practitioner), specialty: 'N/A',
-            organization: 'N/A', organizationNpi: 'N/A', locationName: 'N/A', address: 'N/A', city: 'N/A', state: 'N/A', zip: 'N/A',
-            phone: formatTelecom(practitioner), practitioner: practitioner, role: null, organization: null, location: null
-          });
-        });
+        // Find the "next" page link, rewrite it to go through the proxy
+        const nextLink = (bundle.link || []).find(l => l.relation === "next");
+        if (nextLink && nextLink.url) {
+          nextUrl = rewriteThroughProxy(nextLink.url);
+        } else {
+          nextUrl = null;
+        }
+        statusEl.textContent = `Loaded ${allProviders.length} providers…`;
       }
 
-      directoryRows = rows.sort(function (a, b) { return a.providerName.localeCompare(b.providerName); });
+      render(allProviders);
+      statusEl.textContent = `Done. ${allProviders.length} providers loaded.`;
+    } catch (err) {
+      resultsEl.innerHTML =
+        `<div class="error"><strong>Error loading data:</strong> ${err.message}</div>`;
+      statusEl.textContent = "Load failed.";
+    } finally {
+      loadBtn.disabled = false;
     }
+  }
 
-    function populateFilters() {
-      const specialtyValue = els.specialtyFilter.value;
-      const organizationValue = els.organizationFilter.value;
-      const cityValue = els.cityFilter.value;
+  // Pull the NPI from the identifier array if present
+  function extractNpi(identifiers) {
+    if (!Array.isArray(identifiers)) return "";
+    const npi = identifiers.find(i =>
+      (i.system && i.system.toLowerCase().includes("npi")) ||
+      (i.type && i.type.text && i.type.text.toLowerCase().includes("npi"))
+    );
+    return npi ? npi.value : "";
+  }
 
-      const specialties = Array.from(new Set(directoryRows.map(function (r) { return r.specialty; }).filter(function (v) { return v && v !== 'N/A'; }))).sort();
-      const organizations = Array.from(new Set(directoryRows.map(function (r) { return r.organization; }).filter(function (v) { return v && v !== 'N/A'; }))).sort();
-      const cities = Array.from(new Set(directoryRows.map(function (r) { return r.city; }).filter(function (v) { return v && v !== 'N/A'; }))).sort();
-
-      fillSelect(els.specialtyFilter, 'All specialties', specialties, specialtyValue);
-      fillSelect(els.organizationFilter, 'All organizations', organizations, organizationValue);
-      fillSelect(els.cityFilter, 'All cities', cities, cityValue);
+  // The "next" link points at the real FHIR host; send it through our proxy instead
+  function rewriteThroughProxy(fullUrl) {
+    try {
+      const u = new URL(fullUrl);
+      return `${PROXY_BASE}${u.pathname}${u.search}`;
+    } catch {
+      return null;
     }
+  }
 
-    function fillSelect(select, firstLabel, values, selectedValue) {
-      select.innerHTML = '<option value="">' + escapeHtml(firstLabel) + '</option>' +
-        values.map(function (value) { return '<option value="' + escapeHtml(value) + '">' + escapeHtml(value) + '</option>'; }).join('');
-      if (values.includes(selectedValue)) select.value = selectedValue;
+  function render(list) {
+    if (!list.length) {
+      resultsEl.innerHTML = `<div class="status">No providers match your filter.</div>`;
+      return;
     }
+    resultsEl.innerHTML = list.map(p => `
+      <div class="card">
+        <h3>${escapeHtml(p.name)}
+          <span class="badge ${p.active ? "active" : "inactive"}">
+            ${p.active ? "Active" : "Inactive"}
+          </span>
+        </h3>
+        <div class="meta">
+          ${p.city ? escapeHtml(p.city) : "—"}${p.state ? ", " + escapeHtml(p.state) : ""}
+          ${p.npi ? " · NPI: " + escapeHtml(p.npi) : ""}
+          ${p.id ? " · ID: " + escapeHtml(p.id) : ""}
+        </div>
+      </div>
+    `).join("");
+  }
 
-    function applyFilters() {
-      const query = els.searchInput.value.trim().toLowerCase();
-      const specialty = els.specialtyFilter.value;
-      const organization = els.organizationFilter.value;
-      const city = els.cityFilter.value;
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
 
-      filteredRows = directoryRows.filter(function (row) {
-        const searchable = [row.providerName, row.npi, row.specialty, row.organization, row.organizationNpi, row.address, row.city, row.state, row.zip, row.phone].join(' ').toLowerCase();
-        return (!query || searchable.includes(query)) &&
-          (!specialty || row.specialty === specialty) &&
-          (!organization || row.organization === organization) &&
-          (!city || row.city === city);
-      });
+  // Live client-side filtering
+  searchBox.addEventListener("input", () => {
+    const q = searchBox.value.trim().toLowerCase();
+    if (!q) { render(allProviders); return; }
+    render(allProviders.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.city.toLowerCase().includes(q)
+    ));
+  });
 
-      els.rowCount.textContent = filteredRows.length.toLocaleString();
-      els.exportBtn.disabled = filteredRows.length === 0;
-      renderRows();
-    }
-
-    function renderStats() {
-      els.statsGrid.innerHTML = Object.keys(RESOURCE_CONFIG).map(function (resourceType) {
-        return '' +
-          '<div class="stat-card">' +
-            '<div class="stat-label">' + escapeHtml(RESOURCE_CONFIG[resourceType].label) + '</div>' +
-            '<div class="stat-number">' + rawData[resourceType].length.toLocaleString() + '</div>' +
-            '<div class="stat-actions">' +
-              '<button data-action="reload" data-resource="' + resourceType + '">Reload</button>' +
-              '<button data-action="more" data-resource="' + resourceType + '" ' + (nextUrls[resourceType] ? '' : 'disabled') + '>More</button>' +
-            '</div>' +
-          '</div>';
-      }).join('');
-    }
-
-    function renderRows() {
-      if (filteredRows.length === 0) {
-        els.emptyState.style.display = 'block';
-        els.scroller.style.display = 'none';
-        return;
-      }
-
-      els.emptyState.style.display = 'none';
-      els.scroller.style.display = 'block';
-      els.spacer.style.height = (filteredRows.length * ROW_HEIGHT) + 'px';
-
-      const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
-      const visibleCount = Math.ceil(VIEWPORT_HEIGHT / ROW_HEIGHT) + BUFFER * 2;
-      const endIndex = Math.min(filteredRows.length, startIndex + visibleCount);
-      const visibleRows = filteredRows.slice(startIndex, endIndex);
-
-      els.rowContainer.style.transform = 'translateY(' + (startIndex * ROW_HEIGHT) + 'px)';
-      els.rowContainer.innerHTML = visibleRows.map(function (row, index) {
-        const absoluteIndex = startIndex + index;
-        return '' +
-          '<div class="row">' +
-            '<div class="truncate"><strong>' + escapeHtml(row.providerName) + '</strong><div class="small truncate">Practitioner: ' + escapeHtml(row.practitionerId) + '</div></div>' +
-            '<div class="truncate">' + escapeHtml(row.npi) + '</div>' +
-            '<div class="truncate">' + escapeHtml(row.specialty) + '</div>' +
-            '<div class="truncate">' + escapeHtml(row.organization) + '</div>' +
-            '<div class="truncate">' + escapeHtml(row.city) + ', ' + escapeHtml(row.state) + '<div class="small truncate">' + escapeHtml(row.phone) + '</div></div>' +
-            '<div style="text-align:right"><button data-action="view" data-index="' + absoluteIndex + '">View</button></div>' +
-          '</div>';
-      }).join('');
-    }
-
-    function refreshUi() {
-      buildRows();
-      populateFilters();
-      applyFilters();
-      renderStats();
-      updateButtonStates();
-    }
-
-    async function buildDirectory() {
-      try {
-        setError('');
-        setLoading('Loading first page from all MaineCare FHIR endpoints...');
-        const resourceTypes = Object.keys(RESOURCE_CONFIG);
-        const bundles = await Promise.all(resourceTypes.map(function (rt) { return fetchJson(getResourceUrl(rt)); }));
-        const dataUpdate = {};
-        const nextUpdate = {};
-
-        bundles.forEach(function (bundle, index) {
-          const resourceType = resourceTypes[index];
-          dataUpdate[resourceType] = removeDuplicates((bundle.entry || []).map(function (e) { return e.resource; }).filter(Boolean));
-          nextUpdate[resourceType] = getNextUrl(bundle);
-        });
-
-        rawData = dataUpdate;
-        nextUrls = nextUpdate;
-        scrollTop = 0;
-        els.scroller.scrollTop = 0;
-        refreshUi();
-      } catch (error) {
-        setError(error.message || 'Unable to build directory.');
-      } finally {
-        setLoading('');
-      }
-    }
-
-    async function loadFirstPage(resourceType) {
-      try {
-        setError('');
-        setLoading('Loading ' + RESOURCE_CONFIG[resourceType].label + '...');
-        const bundle = await fetchJson(getResourceUrl(resourceType));
-        rawData[resourceType] = removeDuplicates((bundle.entry || []).map(function (e) { return e.resource; }).filter(Boolean));
-        nextUrls[resourceType] = getNextUrl(bundle);
-        refreshUi();
-      } catch (error) {
-        setError(error.message || 'Unable to load ' + resourceType + '.');
-      } finally {
-        setLoading('');
-      }
-    }
-
-    async function loadNextPage(resourceType) {
-      if (!nextUrls[resourceType]) return;
-      try {
-        setError('');
-        setLoading('Loading more ' + RESOURCE_CONFIG[resourceType].label + '...');
-        const bundle = await fetchJson(nextUrls[resourceType]);
-        const resources = (bundle.entry || []).map(function (e) { return e.resource; }).filter(Boolean);
-        rawData[resourceType] = removeDuplicates(rawData[resourceType].concat(resources));
-        nextUrls[resourceType] = getNextUrl(bundle);
-        refreshUi();
-      } catch (error) {
-        setError(error.message || 'Unable to load more ' + resourceType + '.');
-      } finally {
-        setLoading('');
-      }
-    }
-
-    async function loadMoreAll() {
-      const resourceTypes = Object.keys(RESOURCE_CONFIG).filter(function (rt) { return nextUrls[rt]; });
-      if (resourceTypes.length === 0) return;
-      try {
-        setError('');
-        setLoading('Loading next page for all resources with available next links...');
-        const bundles = await Promise.all(resourceTypes.map(function (rt) { return fetchJson(nextUrls[rt]); }));
-
-        bundles.forEach(function (bundle, index) {
-          const resourceType = resourceTypes[index];
-          const resources = (bundle.entry || []).map(function (e) { return e.resource; }).filter(Boolean);
-          rawData[resourceType] = removeDuplicates(rawData[resourceType].concat(resources));
-          nextUrls[resourceType] = getNextUrl(bundle);
-        });
-
-        refreshUi();
-      } catch (error) {
-        setError(error.message || 'Unable to load more directory data.');
-      } finally {
-        setLoading('');
-      }
-    }
-
-    function resetFilters() {
-      els.searchInput.value = '';
-      els.specialtyFilter.value = '';
-      els.organizationFilter.value = '';
-      els.cityFilter.value = '';
-      scrollTop = 0;
-      els.scroller.scrollTop = 0;
-      applyFilters();
-    }
-
-    function exportCsv() {
-      const headers = ['Provider Name','Provider NPI','Specialty','Organization','Organization NPI','Location Name','Address','City','State','ZIP','Phone','Practitioner ID','PractitionerRole ID'];
-      const rows = filteredRows.map(function (row) {
-        return [row.providerName,row.npi,row.specialty,row.organization,row.organizationNpi,row.locationName,row.address,row.city,row.state,row.zip,row.phone,row.practitionerId,row.roleId];
-      });
-      const csv = [headers].concat(rows).map(function (row) {
-        return row.map(function (value) { return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"'; }).join(',');
-      }).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'mainecare-provider-directory-' + new Date().toISOString().slice(0, 10) + '.csv';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
-
-    function showDetails(row) {
-      els.drawerTitle.textContent = row.providerName;
-      els.drawerSubtitle.textContent = 'NPI: ' + row.npi + ' | Practitioner ID: ' + row.practitionerId;
-      els.drawerContent.innerHTML = '' +
-        '<div class="detail-card"><h3>Provider</h3>' +
-          '<div class="detail-line"><strong>Name:</strong> ' + escapeHtml(row.providerName) + '</div>' +
-          '<div class="detail-line"><strong>NPI:</strong> ' + escapeHtml(row.npi) + '</div>' +
-          '<div class="detail-line"><strong>Contact:</strong> ' + escapeHtml(row.practitioner ? formatTelecom(row.practitioner) : 'N/A') + '</div>' +
-          '<div class="detail-line"><strong>Active:</strong> ' + escapeHtml(row.practitioner && row.practitioner.active === undefined ? 'N/A' : (row.practitioner && row.practitioner.active ? 'Yes' : (row.practitioner ? 'No' : 'N/A'))) + '</div>' +
-        '</div>' +
-        '<div class="detail-card"><h3>Role and Specialty</h3>' +
-          '<div class="detail-line"><strong>PractitionerRole ID:</strong> ' + escapeHtml(row.roleId) + '</div>' +
-          '<div class="detail-line"><strong>Specialty:</strong> ' + escapeHtml(row.specialty) + '</div>' +
-          '<div class="detail-line"><strong>Role Contact:</strong> ' + escapeHtml(row.role ? formatTelecom(row.role) : 'N/A') + '</div>' +
-        '</div>' +
-        '<div class="detail-card"><h3>Organization</h3>' +
-          '<div class="detail-line"><strong>Name:</strong> ' + escapeHtml(row.organization) + '</div>' +
-          '<div class="detail-line"><strong>Organization NPI:</strong> ' + escapeHtml(row.organizationNpi) + '</div>' +
-          '<div class="detail-line"><strong>Contact:</strong> ' + escapeHtml(row.organization ? formatTelecom(row.organization) : 'N/A') + '</div>' +
-        '</div>' +
-        '<div class="detail-card"><h3>Location</h3>' +
-          '<div class="detail-line"><strong>Location Name:</strong> ' + escapeHtml(row.locationName) + '</div>' +
-          '<div class="detail-line"><strong>Address:</strong> ' + escapeHtml(row.address) + '</div>' +
-          '<div class="detail-line"><strong>City:</strong> ' + escapeHtml(row.city) + '</div>' +
-          '<div class="detail-line"><strong>State:</strong> ' + escapeHtml(row.state) + '</div>' +
-          '<div class="detail-line"><strong>ZIP:</strong> ' + escapeHtml(row.zip) + '</div>' +
-          '<div class="detail-line"><strong>Phone:</strong> ' + escapeHtml(row.phone) + '</div>' +
-        '</div>' +
-        '<details class="detail-card"><summary><strong>Raw FHIR references</strong></summary><pre>' +
-          escapeHtml(JSON.stringify({ practitioner: row.practitioner, practitionerRole: row.role, organization: row.organization, location: row.location }, null, 2)) +
-        '</pre></details>';
-      els.drawerBackdrop.style.display = 'flex';
-    }
-
-    els.buildBtn.addEventListener('click', buildDirectory);
-    els.loadMoreAllBtn.addEventListener('click', loadMoreAll);
-    els.exportBtn.addEventListener('click', exportCsv);
-    els.resetBtn.addEventListener('click', resetFilters);
-    els.searchInput.addEventListener('input', applyFilters);
-    els.specialtyFilter.addEventListener('change', applyFilters);
-    els.organizationFilter.addEventListener('change', applyFilters);
-    els.cityFilter.addEventListener('change', applyFilters);
-    els.scroller.addEventListener('scroll', function (event) { scrollTop = event.currentTarget.scrollTop; renderRows(); });
-    els.closeDrawerBtn.addEventListener('click', function () { els.drawerBackdrop.style.display = 'none'; });
-    els.drawerBackdrop.addEventListener('click', function (event) { if (event.target === els.drawerBackdrop) els.drawerBackdrop.style.display = 'none'; });
-
-    document.addEventListener('click', function (event) {
-      const button = event.target.closest('button[data-action]');
-      if (!button) return;
-      const action = button.dataset.action;
-      const resourceType = button.dataset.resource;
-      if (action === 'reload') loadFirstPage(resourceType);
-      if (action === 'more') loadNextPage(resourceType);
-      if (action === 'view') showDetails(filteredRows[Number(button.dataset.index)]);
-    });
-
-    renderStats();
-    refreshUi();
-  </script>
+  loadBtn.addEventListener("click", loadProviders);
+</script>
 </body>
 </html>
