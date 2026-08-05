@@ -155,9 +155,7 @@
 
       if (entries.length === 0) {
         showVerdict("bad",
-          "❌ NOT FOUND in the current directory",
-          "This physician does not appear in the live MaineCare directory. " +
-          "Do not bill on this referral until verified in the portal.");
+                    "Do not bill on this referral until verified in the portal.");
         statusEl.textContent = `No match for “${q}”.`;
         return;
       }
@@ -177,17 +175,13 @@
       const anyActive = providers.some(p => p.active);
       if (isNpi(q) && anyActive) {
         showVerdict("ok",
-          "✅ ENROLLED — safe to bill",
           "This physician is present and active in the current MaineCare directory.");
       } else if (anyActive) {
         showVerdict("warn",
-          "⚠️ MATCH FOUND — confirm the NPI",
-          `${providers.length} physician(s) match that name. ` +
           "Verify the correct NPI on the card(s) below before billing.");
       } else {
         showVerdict("bad",
-          "❌ FOUND but INACTIVE — do not bill",
-          "The physician exists in the directory but is marked inactive.");
+           "The physician exists in the directory but is marked inactive.");
       }
 
       render(providers);
