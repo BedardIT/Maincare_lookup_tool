@@ -54,10 +54,9 @@
   .hint { font-size: .85rem; color: var(--muted); margin-bottom: 20px; }
   .status { margin-bottom: 16px; color: var(--muted); font-size: .9rem; }
 
-  /* Verdict banner */
   .verdict {
     border-radius: 12px; padding: 18px 22px; margin-bottom: 20px;
-    font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 12px;
+    font-size: 1.15rem; font-weight: 700;
   }
   .verdict.ok   { background: var(--okbg);  color: var(--ok);  border: 2px solid var(--ok); }
   .verdict.bad  { background: var(--badbg); color: var(--bad); border: 2px solid var(--bad); }
@@ -95,29 +94,26 @@
 <div class="container">
   <div class="controls">
     <input id="searchBox" type="text"
-           placeholder="Enter physician NPI (10 digits) or last name…"
+           placeholder="Enter physician NPI (10 digits) or last name"
            autocomplete="off" />
     <button id="searchBtn">Verify</button>
   </div>
   <div class="hint">
-    <strong>Best practice:</strong> search by <strong>NPI</strong> for an exact match.
-    Name searches may return multiple physicians — confirm the NPI on the matching card.
+    Search by NPI for an exact match. Name searches may return multiple physicians;
+    confirm the NPI on the matching card.
   </div>
 
   <div id="verdict"></div>
-  <div class="status" id="status">Enter an NPI or name and click <strong>Verify</strong>.</div>
+  <div class="status" id="status">Enter an NPI or name and click Verify.</div>
   <div class="grid" id="results"></div>
 </div>
 
 <footer>
-  Live check against the Maine Provider Directory (FHIR) · Powered by Cloudflare Worker<br>
-  A “Not Found” result means the physician is not in the current directory — verify in the portal before billing.
+  Live check against the Maine Provider Directory (FHIR).
 </footer>
 
 <script>
-  // ---- CONFIG -------------------------------------------------------------
   const PROXY_BASE = "https://shiny-king-551f.weathered-math-22d4.workers.dev";
-  // -------------------------------------------------------------------------
 
   const statusEl  = document.getElementById("status");
   const resultsEl = document.getElementById("results");
@@ -128,10 +124,10 @@
   const isNpi = v => /^\d{10}$/.test(v.trim());
 
   async function fhir(pathAndQuery) {
-    const res = await fetch(`${PROXY_BASE}${pathAndQuery}`, {
+    const res = await fetch(PROXY_BASE + pathAndQuery, {
       headers: { "Accept": "application/fhir+json" }
     });
-    if (!res.ok) throw new Error(`FHIR server returned ${res.status}`);
+    if (!res.ok) throw new Error("FHIR server returned " + res.status);
     return res.json();
   }
 
@@ -142,25 +138,23 @@
     searchBtn.disabled = true;
     verdictEl.innerHTML = "";
     resultsEl.innerHTML = "";
-    statusEl.textContent = "Checking the live directory…";
+    statusEl.textContent = "Checking the live directory.";
 
     try {
-      // Build the right query: NPI => identifier search, else name search
       const query = isNpi(q)
-        ? `/Practitioner?identifier=${encodeURIComponent(q)}`
-        : `/Practitioner?name=${encodeURIComponent(q)}&_count=25`;
+        ? "/Practitioner?identifier=" + encodeURIComponent(q)
+        : "/Practitioner?name=" + encodeURIComponent(q) + "&_count=25";
 
       const bundle = await fhir(query);
       const entries = bundle.entry || [];
 
       if (entries.length === 0) {
-        showVerdict("bad",
-                    "Do not bill on this referral until verified in the portal.");
-        statusEl.textContent = `No match for “${q}”.`;
+        showVerdict("bad", "Not Found",
+          "Do not bill on this referral until verified in the portal.");
+        statusEl.textContent = "No match for " + q + ".";
         return;
       }
 
-      // Map practitioners
       const providers = entries.map(e => {
         const r = e.resource || {};
         return {
@@ -171,76 +165,73 @@
         };
       });
 
-      // Verdict based on active status of matches
       const anyActive = providers.some(p => p.active);
       if (isNpi(q) && anyActive) {
-        showVerdict("ok",
+        showVerdict("ok", "Enrolled",
           "This physician is present and active in the current MaineCare directory.");
       } else if (anyActive) {
-        showVerdict("warn",
+        showVerdict("warn", "Confirm NPI",
           "Verify the correct NPI on the card(s) below before billing.");
       } else {
-        showVerdict("bad",
-           "The physician exists in the directory but is marked inactive.");
+        showVerdict("bad", "Inactive",
+          "The physician exists in the directory but is marked inactive.");
       }
 
       render(providers);
-      statusEl.textContent = `Found ${providers.length} match(es) for “${q}”.`;
+      statusEl.textContent = "Found " + providers.length + " match(es) for " + q + ".";
 
-      // Best-effort: enrich each with PractitionerRole (network/org affiliations)
-      providers.forEach(p => p.id && loadRoles(p.id));
+      providers.forEach(p => { if (p.id) loadRoles(p.id); });
 
     } catch (err) {
       resultsEl.innerHTML =
-        `<div class="error"><strong>Error checking directory:</strong> ${err.message}<br>
-         Please verify manually in the portal.</div>`;
+        '<div class="error"><strong>Error checking directory:</strong> ' +
+        escapeHtml(err.message) +
+        '<br>Please verify manually in the portal.</div>';
       statusEl.textContent = "Check failed.";
     } finally {
       searchBtn.disabled = false;
     }
   }
 
-  // Pull PractitionerRole to show which organizations/networks the physician is tied to
   async function loadRoles(practitionerId) {
     try {
-      const bundle = await fhir(`/PractitionerRole?practitioner=${encodeURIComponent(practitionerId)}`);
-      const roles = (bundle.entry || [])
-        .map(e => e.resource)
-        .filter(Boolean);
+      const bundle = await fhir("/PractitionerRole?practitioner=" + encodeURIComponent(practitionerId));
+      const roles = (bundle.entry || []).map(e => e.resource).filter(Boolean);
       if (!roles.length) return;
 
       const orgs = roles
         .map(r => (r.organization && (r.organization.display || r.organization.reference)) || null)
         .filter(Boolean);
 
-      const target = document.querySelector(`[data-pid="${cssEscape(practitionerId)}"] .roles`);
+      const target = document.querySelector('[data-pid="' + cssEscape(practitionerId) + '"] .roles');
       if (target && orgs.length) {
         target.innerHTML = "Affiliations: " +
-          orgs.map(o => `<span>${escapeHtml(o)}</span>`).join("");
+          orgs.map(o => "<span>" + escapeHtml(o) + "</span>").join("");
       }
-    } catch { /* non-fatal — roles are a bonus */ }
+    } catch (e) { /* roles are a bonus */ }
   }
 
   function showVerdict(kind, title, sub) {
     verdictEl.innerHTML =
-      `<div class="verdict ${kind}"><div>${title}<small>${sub}</small></div></div>`;
+      '<div class="verdict ' + kind + '">' + escapeHtml(title) +
+      '<small>' + escapeHtml(sub || "") + '</small></div>';
   }
 
   function render(list) {
-    resultsEl.innerHTML = list.map(p => `
-      <div class="card" data-pid="${escapeHtml(p.id)}">
-        <h3>${escapeHtml(p.name)}
-          <span class="badge ${p.active ? "active" : "inactive"}">
-            ${p.active ? "Active" : "Inactive"}
-          </span>
-        </h3>
-        <div class="meta">
-          ${p.npi ? "NPI: <strong>" + escapeHtml(p.npi) + "</strong>" : "NPI: —"}
-          ${p.id ? " · Directory ID: " + escapeHtml(p.id) : ""}
-        </div>
-        <div class="roles"></div>
-      </div>
-    `).join("");
+    resultsEl.innerHTML = list.map(p =>
+      '<div class="card" data-pid="' + escapeHtml(p.id) + '">' +
+        '<h3>' + escapeHtml(p.name) +
+          '<span class="badge ' + (p.active ? "active" : "inactive") + '">' +
+            (p.active ? "Active" : "Inactive") +
+          '</span>' +
+        '</h3>' +
+        '<div class="meta">' +
+          (p.npi ? "NPI: <strong>" + escapeHtml(p.npi) + "</strong>" : "NPI: -") +
+          (p.id ? " &middot; Directory ID: " + escapeHtml(p.id) : "") +
+        '</div>' +
+        '<div class="roles"></div>' +
+      '</div>'
+    ).join("");
   }
 
   function formatName(names) {
@@ -262,10 +253,14 @@
   }
 
   function escapeHtml(s) {
-    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
-      .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    return String(s)
+      .split("&").join("&amp;")
+      .split("<").join("&lt;")
+      .split(">").join("&gt;")
+      .split('"').join("&quot;");
   }
-  function cssEscape(s){ return String(s).replace(/"/g,'\\"'); }
+
+  function cssEscape(s) { return String(s).split('"').join('\\"'); }
 
   searchBtn.addEventListener("click", verify);
   searchBox.addEventListener("keydown", e => { if (e.key === "Enter") verify(); });
