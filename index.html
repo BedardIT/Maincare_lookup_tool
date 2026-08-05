@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MaineCare Provider Lookup</title>
+<title>MaineCare Referring Physician Verifier</title>
 <style>
   :root {
     --brand: #0b5fa5;
@@ -13,6 +13,12 @@
     --border: #e2e8f0;
     --text: #1a202c;
     --muted: #64748b;
+    --ok: #16a34a;
+    --okbg: #dcfce7;
+    --bad: #dc2626;
+    --badbg: #fee2e2;
+    --warn: #b45309;
+    --warnbg: #fef3c7;
   }
   * { box-sizing: border-box; }
   body {
@@ -28,211 +34,247 @@
     padding: 24px 20px;
     text-align: center;
   }
-  header h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  header h1 { margin: 0 0 4px; font-size: 1.55rem; }
   header p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
-  .container { max-width: 1000px; margin: 0 auto; padding: 24px 20px; }
+  .container { max-width: 860px; margin: 0 auto; padding: 24px 20px; }
   .controls {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-    align-items: center;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 8px;
   }
   .controls input {
-    flex: 1;
-    min-width: 220px;
-    padding: 11px 14px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 1rem;
+    flex: 1; min-width: 240px; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: 8px; font-size: 1.05rem;
   }
   .controls button {
-    padding: 11px 22px;
-    background: var(--brand);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.15s;
+    padding: 12px 24px; background: var(--brand); color: #fff; border: none;
+    border-radius: 8px; font-size: 1.05rem; cursor: pointer; transition: background .15s;
   }
   .controls button:hover { background: var(--brand-dark); }
-  .controls button:disabled { opacity: 0.6; cursor: not-allowed; }
-  .status { margin-bottom: 16px; color: var(--muted); font-size: 0.9rem; }
+  .controls button:disabled { opacity: .6; cursor: not-allowed; }
+  .hint { font-size: .85rem; color: var(--muted); margin-bottom: 20px; }
+  .status { margin-bottom: 16px; color: var(--muted); font-size: .9rem; }
+
+  /* Verdict banner */
+  .verdict {
+    border-radius: 12px; padding: 18px 22px; margin-bottom: 20px;
+    font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 12px;
+  }
+  .verdict.ok   { background: var(--okbg);  color: var(--ok);  border: 2px solid var(--ok); }
+  .verdict.bad  { background: var(--badbg); color: var(--bad); border: 2px solid var(--bad); }
+  .verdict.warn { background: var(--warnbg);color: var(--warn);border: 2px solid var(--warn); }
+  .verdict small { display: block; font-weight: 500; font-size: .85rem; margin-top: 4px; }
+
   .grid { display: grid; gap: 14px; }
   .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px 18px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
   }
   .card h3 { margin: 0 0 6px; font-size: 1.1rem; color: var(--brand-dark); }
-  .card .meta { font-size: 0.9rem; color: var(--muted); }
+  .card .meta { font-size: .9rem; color: var(--muted); }
   .badge {
-    display: inline-block;
-    font-size: 0.75rem;
-    padding: 2px 9px;
-    border-radius: 20px;
-    margin-left: 8px;
-    vertical-align: middle;
+    display: inline-block; font-size: .72rem; padding: 2px 9px; border-radius: 20px;
+    margin-left: 8px; vertical-align: middle; font-weight: 700;
   }
-  .badge.active { background: #dcfce7; color: #166534; }
-  .badge.inactive { background: #fee2e2; color: #991b1b; }
+  .badge.active   { background: var(--okbg);  color: var(--ok); }
+  .badge.inactive { background: var(--badbg); color: var(--bad); }
+  .roles { margin-top: 8px; font-size: .85rem; }
+  .roles span { display:inline-block; background:#eef2f7; border-radius:6px; padding:2px 8px; margin:2px 4px 0 0; }
   .error {
-    background: #fee2e2;
-    border: 1px solid #fca5a5;
-    color: #991b1b;
-    padding: 14px 16px;
-    border-radius: 8px;
+    background: var(--badbg); border: 1px solid #fca5a5; color: #991b1b;
+    padding: 14px 16px; border-radius: 8px;
   }
-  footer { text-align: center; padding: 24px; color: var(--muted); font-size: 0.85rem; }
+  footer { text-align: center; padding: 24px; color: var(--muted); font-size: .85rem; }
 </style>
 </head>
 <body>
 <header>
-  <h1>MaineCare Provider Lookup</h1>
-  <p>Search enrolled providers from the Maine Provider Directory (FHIR)</p>
+  <h1>MaineCare Referring Physician Verifier</h1>
+  <p>Confirm a referring physician is currently enrolled before billing MaineCare</p>
 </header>
 
 <div class="container">
   <div class="controls">
-    <input id="searchBox" type="text" placeholder="Filter by provider name or city…" />
-    <button id="loadBtn">Load Providers</button>
+    <input id="searchBox" type="text"
+           placeholder="Enter physician NPI (10 digits) or last name…"
+           autocomplete="off" />
+    <button id="searchBtn">Verify</button>
   </div>
-  <div class="status" id="status">Click “Load Providers” to begin.</div>
+  <div class="hint">
+    💡 <strong>Best practice:</strong> search by <strong>NPI</strong> for an exact match.
+    Name searches may return multiple physicians — confirm the NPI on the matching card.
+  </div>
+
+  <div id="verdict"></div>
+  <div class="status" id="status">Enter an NPI or name and click <strong>Verify</strong>.</div>
   <div class="grid" id="results"></div>
 </div>
 
 <footer>
-  Data via Maine Provider Directory FHIR endpoint · Proxied through Cloudflare Worker
+  Live check against the Maine Provider Directory (FHIR) · Proxied through Cloudflare Worker<br>
+  A “Not Found” result means the physician is not in the current directory — verify in the portal before billing.
 </footer>
 
 <script>
   // ---- CONFIG -------------------------------------------------------------
-  // Your Cloudflare Worker proxy base (no trailing slash).
-  // The Worker forwards everything after this to the real FHIR server.
   const PROXY_BASE = "https://shiny-king-551f.weathered-math-22d4.workers.dev";
-  const PAGE_SIZE = 50;
   // -------------------------------------------------------------------------
 
-  let allProviders = [];
-
-  const statusEl = document.getElementById("status");
+  const statusEl  = document.getElementById("status");
   const resultsEl = document.getElementById("results");
-  const loadBtn = document.getElementById("loadBtn");
+  const verdictEl = document.getElementById("verdict");
+  const searchBtn = document.getElementById("searchBtn");
   const searchBox = document.getElementById("searchBox");
 
-  async function loadProviders() {
-    loadBtn.disabled = true;
-    statusEl.textContent = "Loading providers…";
-    resultsEl.innerHTML = "";
-    allProviders = [];
+  const isNpi = v => /^\d{10}$/.test(v.trim());
 
-    // Follow FHIR pagination via the bundle's "next" link
-    let nextUrl = `${PROXY_BASE}/Organization?_count=${PAGE_SIZE}`;
+  async function fhir(pathAndQuery) {
+    const res = await fetch(`${PROXY_BASE}${pathAndQuery}`, {
+      headers: { "Accept": "application/fhir+json" }
+    });
+    if (!res.ok) throw new Error(`FHIR server returned ${res.status}`);
+    return res.json();
+  }
+
+  async function verify() {
+    const q = searchBox.value.trim();
+    if (!q) { statusEl.textContent = "Please enter an NPI or a name."; return; }
+
+    searchBtn.disabled = true;
+    verdictEl.innerHTML = "";
+    resultsEl.innerHTML = "";
+    statusEl.textContent = "Checking the live directory…";
 
     try {
-      while (nextUrl) {
-        const res = await fetch(nextUrl, {
-          headers: { "Accept": "application/fhir+json" }
-        });
-        if (!res.ok) {
-          throw new Error(`FHIR server returned ${res.status} ${res.statusText}`);
-        }
-        const bundle = await res.json();
+      // Build the right query: NPI => identifier search, else name search
+      const query = isNpi(q)
+        ? `/Practitioner?identifier=${encodeURIComponent(q)}`
+        : `/Practitioner?name=${encodeURIComponent(q)}&_count=25`;
 
-        (bundle.entry || []).forEach(e => {
-          const r = e.resource || {};
-          allProviders.push({
-            id: r.id || "",
-            name: r.name || "(Unnamed provider)",
-            active: r.active !== false,
-            city: (r.address && r.address[0] && r.address[0].city) || "",
-            state: (r.address && r.address[0] && r.address[0].state) || "",
-            npi: extractNpi(r.identifier)
-          });
-        });
+      const bundle = await fhir(query);
+      const entries = bundle.entry || [];
 
-        // Find the "next" page link, rewrite it to go through the proxy
-        const nextLink = (bundle.link || []).find(l => l.relation === "next");
-        if (nextLink && nextLink.url) {
-          nextUrl = rewriteThroughProxy(nextLink.url);
-        } else {
-          nextUrl = null;
-        }
-        statusEl.textContent = `Loaded ${allProviders.length} providers…`;
+      if (entries.length === 0) {
+        showVerdict("bad",
+          "❌ NOT FOUND in the current directory",
+          "This physician does not appear in the live MaineCare directory. " +
+          "Do not bill on this referral until verified in the portal.");
+        statusEl.textContent = `No match for “${q}”.`;
+        return;
       }
 
-      render(allProviders);
-      statusEl.textContent = `Done. ${allProviders.length} providers loaded.`;
+      // Map practitioners
+      const providers = entries.map(e => {
+        const r = e.resource || {};
+        return {
+          id: r.id || "",
+          name: formatName(r.name),
+          active: r.active !== false,
+          npi: extractNpi(r.identifier)
+        };
+      });
+
+      // Verdict based on active status of matches
+      const anyActive = providers.some(p => p.active);
+      if (isNpi(q) && anyActive) {
+        showVerdict("ok",
+          "✅ ENROLLED — safe to bill",
+          "This physician is present and active in the current MaineCare directory.");
+      } else if (anyActive) {
+        showVerdict("warn",
+          "⚠️ MATCH FOUND — confirm the NPI",
+          `${providers.length} physician(s) match that name. ` +
+          "Verify the correct NPI on the card(s) below before billing.");
+      } else {
+        showVerdict("bad",
+          "❌ FOUND but INACTIVE — do not bill",
+          "The physician exists in the directory but is marked inactive.");
+      }
+
+      render(providers);
+      statusEl.textContent = `Found ${providers.length} match(es) for “${q}”.`;
+
+      // Best-effort: enrich each with PractitionerRole (network/org affiliations)
+      providers.forEach(p => p.id && loadRoles(p.id));
+
     } catch (err) {
       resultsEl.innerHTML =
-        `<div class="error"><strong>Error loading data:</strong> ${err.message}</div>`;
-      statusEl.textContent = "Load failed.";
+        `<div class="error"><strong>Error checking directory:</strong> ${err.message}<br>
+         Please verify manually in the portal.</div>`;
+      statusEl.textContent = "Check failed.";
     } finally {
-      loadBtn.disabled = false;
+      searchBtn.disabled = false;
     }
   }
 
-  // Pull the NPI from the identifier array if present
-  function extractNpi(identifiers) {
-    if (!Array.isArray(identifiers)) return "";
-    const npi = identifiers.find(i =>
-      (i.system && i.system.toLowerCase().includes("npi")) ||
-      (i.type && i.type.text && i.type.text.toLowerCase().includes("npi"))
-    );
-    return npi ? npi.value : "";
-  }
-
-  // The "next" link points at the real FHIR host; send it through our proxy instead
-  function rewriteThroughProxy(fullUrl) {
+  // Pull PractitionerRole to show which organizations/networks the physician is tied to
+  async function loadRoles(practitionerId) {
     try {
-      const u = new URL(fullUrl);
-      return `${PROXY_BASE}${u.pathname}${u.search}`;
-    } catch {
-      return null;
-    }
+      const bundle = await fhir(`/PractitionerRole?practitioner=${encodeURIComponent(practitionerId)}`);
+      const roles = (bundle.entry || [])
+        .map(e => e.resource)
+        .filter(Boolean);
+      if (!roles.length) return;
+
+      const orgs = roles
+        .map(r => (r.organization && (r.organization.display || r.organization.reference)) || null)
+        .filter(Boolean);
+
+      const target = document.querySelector(`[data-pid="${cssEscape(practitionerId)}"] .roles`);
+      if (target && orgs.length) {
+        target.innerHTML = "Affiliations: " +
+          orgs.map(o => `<span>${escapeHtml(o)}</span>`).join("");
+      }
+    } catch { /* non-fatal — roles are a bonus */ }
+  }
+
+  function showVerdict(kind, title, sub) {
+    verdictEl.innerHTML =
+      `<div class="verdict ${kind}"><div>${title}<small>${sub}</small></div></div>`;
   }
 
   function render(list) {
-    if (!list.length) {
-      resultsEl.innerHTML = `<div class="status">No providers match your filter.</div>`;
-      return;
-    }
     resultsEl.innerHTML = list.map(p => `
-      <div class="card">
+      <div class="card" data-pid="${escapeHtml(p.id)}">
         <h3>${escapeHtml(p.name)}
           <span class="badge ${p.active ? "active" : "inactive"}">
             ${p.active ? "Active" : "Inactive"}
           </span>
         </h3>
         <div class="meta">
-          ${p.city ? escapeHtml(p.city) : "—"}${p.state ? ", " + escapeHtml(p.state) : ""}
-          ${p.npi ? " · NPI: " + escapeHtml(p.npi) : ""}
-          ${p.id ? " · ID: " + escapeHtml(p.id) : ""}
+          ${p.npi ? "NPI: <strong>" + escapeHtml(p.npi) + "</strong>" : "NPI: —"}
+          ${p.id ? " · Directory ID: " + escapeHtml(p.id) : ""}
         </div>
+        <div class="roles"></div>
       </div>
     `).join("");
   }
 
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  function formatName(names) {
+    if (!Array.isArray(names) || !names.length) return "(Unnamed)";
+    const n = names[0];
+    if (n.text) return n.text;
+    const given = Array.isArray(n.given) ? n.given.join(" ") : (n.given || "");
+    return [given, n.family].filter(Boolean).join(" ") || "(Unnamed)";
   }
 
-  // Live client-side filtering
-  searchBox.addEventListener("input", () => {
-    const q = searchBox.value.trim().toLowerCase();
-    if (!q) { render(allProviders); return; }
-    render(allProviders.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.city.toLowerCase().includes(q)
-    ));
-  });
+  function extractNpi(identifiers) {
+    if (!Array.isArray(identifiers)) return "";
+    const npi = identifiers.find(i =>
+      (i.system && i.system.toLowerCase().includes("npi")) ||
+      (i.type && i.type.text && i.type.text.toLowerCase().includes("npi")) ||
+      (i.value && /^\d{10}$/.test(i.value))
+    );
+    return npi ? npi.value : "";
+  }
 
-  loadBtn.addEventListener("click", loadProviders);
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function cssEscape(s){ return String(s).replace(/"/g,'\\"'); }
+
+  searchBtn.addEventListener("click", verify);
+  searchBox.addEventListener("keydown", e => { if (e.key === "Enter") verify(); });
 </script>
 </body>
 </html>
