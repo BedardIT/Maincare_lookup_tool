@@ -76,13 +76,64 @@
   }
   .badge.active   { background: var(--okbg);  color: var(--ok); }
   .badge.inactive { background: var(--badbg); color: var(--bad); }
-  .roles { margin-top: 8px; font-size: .85rem; }
-  .roles span { display:inline-block; background:#eef2f7; border-radius:6px; padding:2px 8px; margin:2px 4px 0 0; }
+  .details-btn {
+    margin-top: 12px; padding: 8px 16px; background: #fff; color: var(--brand);
+    border: 1px solid var(--brand); border-radius: 8px; font-size: .9rem;
+    cursor: pointer; font-weight: 600; transition: background .15s;
+  }
+  .details-btn:hover { background: #eef5fb; }
   .error {
     background: var(--badbg); border: 1px solid #fca5a5; color: #991b1b;
     padding: 14px 16px; border-radius: 8px;
   }
   footer { text-align: center; padding: 24px; color: var(--muted); font-size: .85rem; }
+
+  /* Slide-out details panel */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.4); z-index: 1000;
+  }
+  .detail-panel {
+    position: fixed; top: 0; right: -760px;
+    width: 760px; max-width: 100%; height: 100%;
+    background: #fff; overflow-y: auto; z-index: 1001;
+    transition: right .25s ease; box-shadow: -4px 0 18px rgba(0,0,0,.18);
+  }
+  .detail-panel.open { right: 0; }
+  .detail-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: #fff; z-index: 2;
+  }
+  .detail-header h2 { margin: 0; font-size: 1.25rem; color: var(--brand-dark); }
+  .detail-header button {
+    padding: 8px 16px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; font-size: .9rem;
+  }
+  .detail-header button:hover { background: #e6ebf1; }
+  .detail-section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .detail-section h3 {
+    margin: 0 0 10px; font-size: .8rem; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--muted);
+  }
+  .kv { display: grid; grid-template-columns: 160px 1fr; gap: 6px 14px; font-size: .95rem; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; word-break: break-word; }
+  .subcard {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 10px; background: #fafbfc;
+  }
+  .subcard h4 { margin: 0 0 6px; font-size: 1rem; color: var(--brand-dark); }
+  .subcard .line { font-size: .9rem; margin: 2px 0; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  details.raw summary {
+    cursor: pointer; font-weight: 600; font-size: .9rem; color: var(--brand);
+  }
+  pre {
+    background: #0f172a; color: #f1f5f9; border-radius: 8px;
+    padding: 12px; overflow: auto; font-size: .78rem; margin-top: 10px;
+  }
+  .panel-loading { padding: 20px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -112,6 +163,15 @@
   Live check against the Maine Provider Directory (FHIR).
 </footer>
 
+<div id="detailOverlay" class="overlay"></div>
+<aside id="detailPanel" class="detail-panel" aria-hidden="true">
+  <div class="detail-header">
+    <h2 id="detailTitle">Provider Details</h2>
+    <button id="detailClose">Close</button>
+  </div>
+  <div id="detailContent"></div>
+</aside>
+
 <script>
   const PROXY_BASE = "https://shiny-king-551f.weathered-math-22d4.workers.dev";
 
@@ -120,7 +180,13 @@
   const verdictEl = document.getElementById("verdict");
   const searchBtn = document.getElementById("searchBtn");
   const searchBox = document.getElementById("searchBox");
+  const overlayEl = document.getElementById("detailOverlay");
+  const panelEl   = document.getElementById("detailPanel");
+  const panelTitle = document.getElementById("detailTitle");
+  const panelBody = document.getElementById("detailContent");
+  const panelClose = document.getElementById("detailClose");
 
+  const providerLookup = {};
   const isNpi = v => /^\d{10}$/.test(v.trim());
 
   async function fhir(pathAndQuery) {
@@ -157,12 +223,15 @@
 
       const providers = entries.map(e => {
         const r = e.resource || {};
-        return {
+        const p = {
           id: r.id || "",
           name: formatName(r.name),
           active: r.active !== false,
-          npi: extractNpi(r.identifier)
+          npi: extractNpi(r.identifier),
+          raw: r
         };
+        if (p.id) providerLookup[p.id] = p;
+        return p;
       });
 
       const anyActive = providers.some(p => p.active);
@@ -180,8 +249,6 @@
       render(providers);
       statusEl.textContent = "Found " + providers.length + " match(es) for " + q + ".";
 
-      providers.forEach(p => { if (p.id) loadRoles(p.id); });
-
     } catch (err) {
       resultsEl.innerHTML =
         '<div class="error"><strong>Error checking directory:</strong> ' +
@@ -193,24 +260,6 @@
     }
   }
 
-  async function loadRoles(practitionerId) {
-    try {
-      const bundle = await fhir("/PractitionerRole?practitioner=" + encodeURIComponent(practitionerId));
-      const roles = (bundle.entry || []).map(e => e.resource).filter(Boolean);
-      if (!roles.length) return;
-
-      const orgs = roles
-        .map(r => (r.organization && (r.organization.display || r.organization.reference)) || null)
-        .filter(Boolean);
-
-      const target = document.querySelector('[data-pid="' + cssEscape(practitionerId) + '"] .roles');
-      if (target && orgs.length) {
-        target.innerHTML = "Affiliations: " +
-          orgs.map(o => "<span>" + escapeHtml(o) + "</span>").join("");
-      }
-    } catch (e) { /* roles are a bonus */ }
-  }
-
   function showVerdict(kind, title, sub) {
     verdictEl.innerHTML =
       '<div class="verdict ' + kind + '">' + escapeHtml(title) +
@@ -219,7 +268,7 @@
 
   function render(list) {
     resultsEl.innerHTML = list.map(p =>
-      '<div class="card" data-pid="' + escapeHtml(p.id) + '">' +
+      '<div class="card">' +
         '<h3>' + escapeHtml(p.name) +
           '<span class="badge ' + (p.active ? "active" : "inactive") + '">' +
             (p.active ? "Active" : "Inactive") +
@@ -229,17 +278,215 @@
           (p.npi ? "NPI: <strong>" + escapeHtml(p.npi) + "</strong>" : "NPI: -") +
           (p.id ? " &middot; Directory ID: " + escapeHtml(p.id) : "") +
         '</div>' +
-        '<div class="roles"></div>' +
+        (p.id ? '<button class="details-btn" data-pid="' + escapeHtml(p.id) + '">View Details</button>' : "") +
       '</div>'
     ).join("");
   }
+
+  // ---- Slide-out details panel -------------------------------------------
+
+  function openPanel() {
+    overlayEl.style.display = "block";
+    panelEl.classList.add("open");
+    panelEl.setAttribute("aria-hidden", "false");
+  }
+
+  function closePanel() {
+    overlayEl.style.display = "none";
+    panelEl.classList.remove("open");
+    panelEl.setAttribute("aria-hidden", "true");
+  }
+
+  async function showDetails(practitionerId) {
+    const base = providerLookup[practitionerId];
+    panelTitle.textContent = base ? base.name : "Provider Details";
+    panelBody.innerHTML = '<div class="panel-loading">Loading full provider record.</div>';
+    openPanel();
+
+    try {
+      const practitioner = (base && base.raw) || await fhir("/Practitioner/" + encodeURIComponent(practitionerId));
+
+      let roles = [];
+      let organizations = [];
+      let locations = [];
+
+      try {
+        const roleBundle = await fhir("/PractitionerRole?practitioner=" + encodeURIComponent(practitionerId) + "&_count=50");
+        roles = (roleBundle.entry || []).map(e => e.resource).filter(Boolean);
+      } catch (e) { /* roles optional */ }
+
+      // Resolve referenced organizations and locations (best effort)
+      const orgRefs = new Set();
+      const locRefs = new Set();
+      roles.forEach(r => {
+        if (r.organization && r.organization.reference) orgRefs.add(r.organization.reference);
+        (r.location || []).forEach(l => { if (l.reference) locRefs.add(l.reference); });
+      });
+
+      organizations = await resolveRefs(Array.from(orgRefs));
+      locations = await resolveRefs(Array.from(locRefs));
+
+      panelBody.innerHTML = buildDetailHtml(practitioner, roles, organizations, locations);
+
+    } catch (err) {
+      panelBody.innerHTML =
+        '<div class="detail-section"><div class="error"><strong>Could not load details:</strong> ' +
+        escapeHtml(err.message) + '</div></div>';
+    }
+  }
+
+  async function resolveRefs(refs) {
+    const out = [];
+    for (const ref of refs.slice(0, 15)) {
+      try {
+        const resource = await fhir("/" + ref);
+        out.push(resource);
+      } catch (e) { /* skip unresolved */ }
+    }
+    return out;
+  }
+
+  function buildDetailHtml(practitioner, roles, organizations, locations) {
+    const npi = extractNpi(practitioner.identifier);
+    const active = practitioner.active === undefined ? "Unknown" : (practitioner.active ? "Yes" : "No");
+    const gender = practitioner.gender || "Not listed";
+
+    let html = "";
+
+    // Summary
+    html +=
+      '<div class="detail-section">' +
+        '<h3>Summary</h3>' +
+        '<dl class="kv">' +
+          row("Name", formatName(practitioner.name)) +
+          row("NPI", npi || "Not listed") +
+          row("Active", active) +
+          row("Gender", gender) +
+          row("Directory ID", practitioner.id || "Not listed") +
+        '</dl>' +
+      '</div>';
+
+    // Identifiers
+    const identifiers = practitioner.identifier || [];
+    html += '<div class="detail-section"><h3>Identifiers</h3>';
+    if (identifiers.length) {
+      html += identifiers.map(function (i) {
+        const label = (i.type && i.type.text) || (i.system || "Identifier");
+        return '<div class="line"><strong>' + escapeHtml(label) + ':</strong> ' + escapeHtml(i.value || "-") + '</div>';
+      }).join("");
+    } else {
+      html += '<div class="muted">None listed.</div>';
+    }
+    html += '</div>';
+
+    // Contact (telecom)
+    const telecom = practitioner.telecom || [];
+    html += '<div class="detail-section"><h3>Contact</h3>';
+    if (telecom.length) {
+      html += telecom.map(function (t) {
+        return '<div class="line"><strong>' + escapeHtml(t.system || "contact") + ':</strong> ' +
+          escapeHtml(t.value || "-") + (t.use ? ' <span class="muted">(' + escapeHtml(t.use) + ')</span>' : "") + '</div>';
+      }).join("");
+    } else {
+      html += '<div class="muted">No contact details in the directory.</div>';
+    }
+    html += '</div>';
+
+    // Practitioner addresses
+    const addresses = practitioner.address || [];
+    if (addresses.length) {
+      html += '<div class="detail-section"><h3>Addresses</h3>';
+      html += addresses.map(function (a) { return '<div class="line">' + escapeHtml(formatAddress(a)) + '</div>'; }).join("");
+      html += '</div>';
+    }
+
+    // Qualifications
+    const quals = practitioner.qualification || [];
+    if (quals.length) {
+      html += '<div class="detail-section"><h3>Qualifications</h3>';
+      html += quals.map(function (q) {
+        const text = (q.code && (q.code.text || codingText(q.code.coding))) || "Qualification";
+        const issuer = q.issuer && q.issuer.display ? " - " + escapeHtml(q.issuer.display) : "";
+        return '<div class="line">' + escapeHtml(text) + issuer + '</div>';
+      }).join("");
+      html += '</div>';
+    }
+
+    // Roles and specialties
+    html += '<div class="detail-section"><h3>Roles &amp; Specialties</h3>';
+    if (roles.length) {
+      html += roles.map(function (r) {
+        const specialty = codingText([].concat.apply([], (r.specialty || []).map(function (s) { return s.coding || []; }))) ||
+                          (r.specialty || []).map(function (s) { return s.text; }).filter(Boolean).join(", ") || "Not listed";
+        const orgName = (r.organization && (r.organization.display || r.organization.reference)) || "Not listed";
+        const roleContact = (r.telecom || []).map(function (t) { return (t.system || "contact") + ": " + t.value; }).join("; ") || "None";
+        const period = r.period ? ((r.period.start || "?") + " to " + (r.period.end || "present")) : "Not listed";
+        return '<div class="subcard">' +
+          '<h4>Role ' + escapeHtml(r.id || "") + '</h4>' +
+          '<div class="line"><strong>Specialty:</strong> ' + escapeHtml(specialty) + '</div>' +
+          '<div class="line"><strong>Organization:</strong> ' + escapeHtml(orgName) + '</div>' +
+          '<div class="line"><strong>Contact:</strong> ' + escapeHtml(roleContact) + '</div>' +
+          '<div class="line"><strong>Active period:</strong> ' + escapeHtml(period) + '</div>' +
+        '</div>';
+      }).join("");
+    } else {
+      html += '<div class="muted">No PractitionerRole records returned.</div>';
+    }
+    html += '</div>';
+
+    // Organizations
+    html += '<div class="detail-section"><h3>Organizations</h3>';
+    if (organizations.length) {
+      html += organizations.map(function (o) {
+        return '<div class="subcard">' +
+          '<h4>' + escapeHtml(o.name || o.id || "Organization") + '</h4>' +
+          '<div class="line"><strong>NPI:</strong> ' + escapeHtml(extractNpi(o.identifier) || "Not listed") + '</div>' +
+          '<div class="line"><strong>Contact:</strong> ' + escapeHtml((o.telecom || []).map(function (t) { return (t.system || "contact") + ": " + t.value; }).join("; ") || "None") + '</div>' +
+        '</div>';
+      }).join("");
+    } else {
+      html += '<div class="muted">No related organizations loaded.</div>';
+    }
+    html += '</div>';
+
+    // Locations
+    html += '<div class="detail-section"><h3>Locations</h3>';
+    if (locations.length) {
+      html += locations.map(function (l) {
+        return '<div class="subcard">' +
+          '<h4>' + escapeHtml(l.name || l.id || "Location") + '</h4>' +
+          '<div class="line"><strong>Address:</strong> ' + escapeHtml(formatAddress(l.address)) + '</div>' +
+          '<div class="line"><strong>Contact:</strong> ' + escapeHtml((l.telecom || []).map(function (t) { return (t.system || "contact") + ": " + t.value; }).join("; ") || "None") + '</div>' +
+        '</div>';
+      }).join("");
+    } else {
+      html += '<div class="muted">No related locations loaded.</div>';
+    }
+    html += '</div>';
+
+    // Raw data
+    html += '<div class="detail-section">' +
+      '<details class="raw"><summary>Show raw FHIR data</summary>' +
+      '<pre>' + escapeHtml(JSON.stringify({ practitioner: practitioner, roles: roles, organizations: organizations, locations: locations }, null, 2)) + '</pre>' +
+      '</details></div>';
+
+    return html;
+  }
+
+  function row(label, value) {
+    return '<dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(value) + '</dd>';
+  }
+
+  // ---- Helpers ------------------------------------------------------------
 
   function formatName(names) {
     if (!Array.isArray(names) || !names.length) return "(Unnamed)";
     const n = names[0];
     if (n.text) return n.text;
+    const prefix = Array.isArray(n.prefix) ? n.prefix.join(" ") : (n.prefix || "");
     const given = Array.isArray(n.given) ? n.given.join(" ") : (n.given || "");
-    return [given, n.family].filter(Boolean).join(" ") || "(Unnamed)";
+    const suffix = Array.isArray(n.suffix) ? n.suffix.join(" ") : (n.suffix || "");
+    return [prefix, given, n.family, suffix].filter(Boolean).join(" ") || "(Unnamed)";
   }
 
   function extractNpi(identifiers) {
@@ -252,18 +499,36 @@
     return npi ? npi.value : "";
   }
 
+  function formatAddress(a) {
+    if (!a) return "Not listed";
+    const line = Array.isArray(a.line) ? a.line.join(", ") : (a.line || "");
+    return [line, a.city, a.state, a.postalCode].filter(Boolean).join(", ") || "Not listed";
+  }
+
+  function codingText(coding) {
+    return (coding || []).map(function (c) { return c.display || c.code; }).filter(Boolean).join(", ");
+  }
+
   function escapeHtml(s) {
-    return String(s)
+    return String(s == null ? "" : s)
       .split("&").join("&amp;")
       .split("<").join("&lt;")
       .split(">").join("&gt;")
       .split('"').join("&quot;");
   }
 
-  function cssEscape(s) { return String(s).split('"').join('\\"'); }
+  // ---- Events -------------------------------------------------------------
 
   searchBtn.addEventListener("click", verify);
   searchBox.addEventListener("keydown", e => { if (e.key === "Enter") verify(); });
+  panelClose.addEventListener("click", closePanel);
+  overlayEl.addEventListener("click", closePanel);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closePanel(); });
+
+  resultsEl.addEventListener("click", function (e) {
+    const btn = e.target.closest(".details-btn");
+    if (btn) showDetails(btn.getAttribute("data-pid"));
+  });
 </script>
 </body>
 </html>
