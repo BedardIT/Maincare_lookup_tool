@@ -1,0 +1,59 @@
+# .github/workflows/noprs-scrape.yml
+# ---------------------------------------------------------------------------
+# Renders the MaineCare NOPRS Telerik report once a day, extracts the provider
+# table, and commits noprs.json into the repo so GitHub Pages serves it as a
+# static file your app can read directly.
+#
+# Place this file at:  .github/workflows/noprs-scrape.yml
+# ---------------------------------------------------------------------------
+name: Scrape NOPRS List
+
+on:
+  schedule:
+    # 07:15 UTC daily = ~03:15 America/New_York. Adjust if you like.
+    - cron: "15 7 * * *"
+  workflow_dispatch: {}   # lets you run it on demand from the Actions tab
+
+permissions:
+  contents: write         # needed so the job can commit noprs.json
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright (Chromium only)
+        run: |
+          npm init -y
+          npm install playwright@latest
+          npx playwright install --with-deps chromium
+
+      - name: Scrape NOPRS report
+        run: node scrape-noprs.js
+
+      - name: Upload debug HTML on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: noprs-debug-html
+          path: noprs-debug.html
+          if-no-files-found: ignore
+
+      - name: Commit updated noprs.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- noprs.json; then
+            echo "noprs.json unchanged — nothing to commit."
+          else
+            git add noprs.json
+            git commit -m "chore: refresh NOPRS list ($(date -u +%Y-%m-%d))"
+            git push
+          fi
