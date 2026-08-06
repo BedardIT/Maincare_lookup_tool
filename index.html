@@ -1,645 +1,433 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MaineCare Referring Physician Verifier</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MaineCare Provider Enrollment Lookup</title>
 <style>
   :root {
-    --brand: #0b5fa5;
-    --brand-dark: #084576;
-    --bg: #f4f6f9;
-    --card: #ffffff;
-    --border: #e2e8f0;
-    --text: #1a202c;
-    --muted: #64748b;
-    --ok: #16a34a;
-    --okbg: #dcfce7;
-    --bad: #dc2626;
-    --badbg: #fee2e2;
-    --warn: #b45309;
-    --warnbg: #fef3c7;
+    --brand:#0b5cab; --brand-dark:#08427c; --ok:#1a7f37; --bad:#b42318;
+    --ink:#1c2433; --muted:#5b667a; --line:#e3e8f0; --bg:#f5f7fb; --card:#fff;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing:border-box; }
   body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.5;
+    margin:0; font-family:"Segoe UI",system-ui,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.45;
   }
   header {
-    background: var(--brand);
-    color: #fff;
-    padding: 24px 20px;
-    text-align: center;
+    background:linear-gradient(135deg,var(--brand),var(--brand-dark));
+    color:#fff; padding:22px 20px;
   }
-  header h1 { margin: 0 0 4px; font-size: 1.55rem; }
-  header p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
-  .container { max-width: 860px; margin: 0 auto; padding: 24px 20px; }
-  .controls {
-    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-    margin-bottom: 8px;
-  }
-  .controls input {
-    flex: 1; min-width: 240px; padding: 12px 14px;
-    border: 1px solid var(--border); border-radius: 8px; font-size: 1.05rem;
-  }
-  .controls button {
-    padding: 12px 24px; background: var(--brand); color: #fff; border: none;
-    border-radius: 8px; font-size: 1.05rem; cursor: pointer; transition: background .15s;
-  }
-  .controls button:hover { background: var(--brand-dark); }
-  .controls button:disabled { opacity: .6; cursor: not-allowed; }
-  .hint { font-size: .85rem; color: var(--muted); margin-bottom: 20px; }
-  .status { margin-bottom: 16px; color: var(--muted); font-size: .9rem; }
+  header h1 { margin:0; font-size:1.4rem; }
+  header p { margin:4px 0 0; opacity:.9; font-size:.9rem; }
+  .wrap { max-width:1000px; margin:0 auto; padding:20px; }
 
-  .verdict {
-    border-radius: 12px; padding: 18px 22px; margin-bottom: 20px;
-    font-size: 1.15rem; font-weight: 700;
+  /* ---- Controls ---- */
+  .controls { background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(16,24,40,.05); }
+  .row { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+  .field { display:flex; flex-direction:column; gap:4px; flex:1 1 200px; }
+  .field label { font-size:.78rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.02em; }
+  input, select {
+    padding:9px 11px; border:1px solid var(--line); border-radius:8px;
+    font-size:.95rem; background:#fff; color:var(--ink);
   }
-  .verdict.ok   { background: var(--okbg);  color: var(--ok);  border: 2px solid var(--ok); }
-  .verdict.bad  { background: var(--badbg); color: var(--bad); border: 2px solid var(--bad); }
-  .verdict.warn { background: var(--warnbg);color: var(--warn);border: 2px solid var(--warn); }
-  .verdict small { display: block; font-weight: 500; font-size: .85rem; margin-top: 4px; }
+  input:focus, select:focus { outline:2px solid var(--brand); outline-offset:1px; }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .seg button {
+    border:none; background:#fff; padding:9px 14px; cursor:pointer; font-size:.9rem;
+    color:var(--muted); font-weight:600;
+  }
+  .seg button.active { background:var(--brand); color:#fff; }
+  .btn {
+    background:var(--brand); color:#fff; border:none; border-radius:8px;
+    padding:10px 18px; font-size:.95rem; font-weight:600; cursor:pointer;
+  }
+  .btn:hover { background:var(--brand-dark); }
+  .btn.ghost { background:#fff; color:var(--brand); border:1px solid var(--brand); }
+  .advanced { margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);
+    display:none; }
+  .advanced.open { display:block; }
+  .toggle-adv { background:none; border:none; color:var(--brand); cursor:pointer;
+    font-size:.85rem; font-weight:600; margin-top:8px; padding:0; }
 
-  .grid { display: grid; gap: 14px; }
+  /* ---- Results ---- */
+  .meta { margin:18px 4px 8px; font-size:.9rem; color:var(--muted); }
   .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-    padding: 16px 18px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:16px; margin-bottom:12px; box-shadow:0 1px 3px rgba(16,24,40,.05);
+    cursor:pointer; transition:box-shadow .15s;
   }
-  .card h3 { margin: 0 0 6px; font-size: 1.1rem; color: var(--brand-dark); }
-  .card .meta { font-size: .9rem; color: var(--muted); }
+  .card:hover { box-shadow:0 4px 14px rgba(16,24,40,.10); }
+  .card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .card h3 { margin:0 0 2px; font-size:1.08rem; }
+  .type-tag {
+    font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    padding:2px 8px; border-radius:20px;
+  }
+  .type-org { background:#eef4ff; color:var(--brand-dark); }
+  .type-prac { background:#f3edff; color:#5b21b6; }
   .badge {
-    display: inline-block; font-size: .72rem; padding: 2px 9px; border-radius: 20px;
-    margin-left: 8px; vertical-align: middle; font-weight: 700;
+    display:inline-flex; align-items:center; gap:5px; font-size:.8rem; font-weight:700;
+    padding:4px 10px; border-radius:20px; white-space:nowrap;
   }
-  .badge.active   { background: var(--okbg);  color: var(--ok); }
-  .badge.inactive { background: var(--badbg); color: var(--bad); }
-  .details-btn {
-    margin-top: 12px; padding: 8px 16px; background: #fff; color: var(--brand);
-    border: 1px solid var(--brand); border-radius: 8px; font-size: .9rem;
-    cursor: pointer; font-weight: 600; transition: background .15s;
-  }
-  .details-btn:hover { background: #eef5fb; }
-  .error {
-    background: var(--badbg); border: 1px solid #fca5a5; color: #991b1b;
-    padding: 14px 16px; border-radius: 8px;
-  }
-  footer { text-align: center; padding: 24px; color: var(--muted); font-size: .85rem; }
+  .badge.ok { background:#e7f6ec; color:var(--ok); }
+  .badge.bad { background:#fdeceb; color:var(--bad); }
+  .kv { display:flex; flex-wrap:wrap; gap:6px 22px; margin-top:8px; font-size:.9rem; }
+  .kv span b { color:var(--muted); font-weight:600; }
+  .copy { border:none; background:#eef2f7; border-radius:6px; cursor:pointer;
+    font-size:.72rem; padding:2px 6px; margin-left:6px; color:var(--brand); }
+  .copy:hover { background:#dde5ef; }
 
-  /* Slide-out details panel */
-  .overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.4); z-index: 1000;
+  /* ---- States ---- */
+  .state { text-align:center; padding:40px 20px; color:var(--muted); }
+  .spinner { width:34px; height:34px; border:3px solid var(--line);
+    border-top-color:var(--brand); border-radius:50%; margin:0 auto 12px;
+    animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .error { background:#fdeceb; color:var(--bad); border:1px solid #f5c6c2;
+    border-radius:10px; padding:14px; }
+
+  /* ---- Flyout ---- */
+  .overlay { position:fixed; inset:0; background:rgba(16,24,40,.45);
+    display:none; z-index:50; }
+  .overlay.open { display:block; }
+  .flyout {
+    position:fixed; top:0; right:0; height:100%; width:min(480px,100%);
+    background:#fff; z-index:60; transform:translateX(100%);
+    transition:transform .25s ease; overflow-y:auto; box-shadow:-4px 0 24px rgba(16,24,40,.2);
   }
-  .detail-panel {
-    position: fixed; top: 0; right: -760px;
-    width: 760px; max-width: 100%; height: 100%;
-    background: #fff; overflow-y: auto; z-index: 1001;
-    transition: right .25s ease; box-shadow: -4px 0 18px rgba(0,0,0,.18);
+  .flyout.open { transform:translateX(0); }
+  .flyout-head { position:sticky; top:0; background:var(--brand); color:#fff;
+    padding:16px 20px; display:flex; justify-content:space-between; align-items:center; }
+  .flyout-head h2 { margin:0; font-size:1.1rem; }
+  .flyout-close { background:none; border:none; color:#fff; font-size:1.5rem;
+    cursor:pointer; line-height:1; }
+  .flyout-body { padding:20px; }
+  .detail-row { padding:10px 0; border-bottom:1px solid var(--line); }
+  .detail-row b { display:block; font-size:.75rem; text-transform:uppercase;
+    color:var(--muted); letter-spacing:.03em; margin-bottom:2px; }
+  .print-btn { margin-top:16px; width:100%; }
+
+  @media print {
+    header,.controls,.meta,.flyout-close,.overlay { display:none !important; }
+    .flyout { position:static; transform:none; width:100%; box-shadow:none; }
   }
-  .detail-panel.open { right: 0; }
-  .detail-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 20px; border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; background: #fff; z-index: 2;
-  }
-  .detail-header h2 { margin: 0; font-size: 1.25rem; color: var(--brand-dark); }
-  .detail-header button {
-    padding: 8px 16px; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; cursor: pointer; font-size: .9rem;
-  }
-  .detail-header button:hover { background: #e6ebf1; }
-  .detail-section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
-  .detail-section h3 {
-    margin: 0 0 10px; font-size: .8rem; text-transform: uppercase;
-    letter-spacing: .04em; color: var(--muted);
-  }
-  .kv { display: grid; grid-template-columns: 160px 1fr; gap: 6px 14px; font-size: .95rem; }
-  .kv dt { color: var(--muted); }
-  .kv dd { margin: 0; word-break: break-word; }
-  .subcard {
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 12px 14px; margin-bottom: 10px; background: #fafbfc;
-  }
-  .subcard h4 { margin: 0 0 6px; font-size: 1rem; color: var(--brand-dark); }
-  .subcard .line { font-size: .9rem; margin: 2px 0; }
-  .muted { color: var(--muted); font-size: .9rem; }
-  details.raw summary {
-    cursor: pointer; font-weight: 600; font-size: .9rem; color: var(--brand);
-  }
-  pre {
-    background: #0f172a; color: #f1f5f9; border-radius: 8px;
-    padding: 12px; overflow: auto; font-size: .78rem; margin-top: 10px;
-  }
-  .panel-loading { padding: 20px; color: var(--muted); }
 </style>
 </head>
 <body>
 <header>
-  <h1>MaineCare Referring Physician Verifier</h1>
-  <p>Confirm a referring physician is currently enrolled before billing MaineCare</p>
+  <h1>🩺 MaineCare Provider Enrollment Lookup</h1>
+  <p>Verify that a referring provider or facility is enrolled with Maine Medicaid before billing.</p>
 </header>
 
-<div class="container">
+<div class="wrap">
   <div class="controls">
-    <input id="searchBox" type="text"
-           placeholder="Enter physician NPI (10 digits) or last name"
-           autocomplete="off" />
-    <button id="searchBtn">Verify</button>
-  </div>
-  <div class="hint">
-    Search by NPI for an exact match. Name searches may return multiple physicians;
-    confirm the NPI on the matching card.
+    <div class="row">
+      <div class="field" style="flex:0 0 auto;">
+        <label>Search for</label>
+        <div class="seg" id="typeSeg">
+          <button data-type="both" class="active">Both</button>
+          <button data-type="Practitioner">Providers</button>
+          <button data-type="Organization">Organizations</button>
+        </div>
+      </div>
+      <div class="field">
+        <label id="qLabel">Name or NPI</label>
+        <input id="q" type="text" placeholder="e.g. Smith  ·  Bedard Pharmacy  ·  1234567890" autocomplete="off" />
+      </div>
+      <button class="btn" id="searchBtn">Search</button>
+    </div>
+
+    <button class="toggle-adv" id="advToggle">▾ Advanced filters</button>
+    <div class="advanced" id="advanced">
+      <div class="row">
+        <div class="field">
+          <label>City</label>
+          <input id="fCity" type="text" placeholder="e.g. Auburn" />
+        </div>
+        <div class="field">
+          <label>State</label>
+          <input id="fState" type="text" maxlength="2" placeholder="ME" />
+        </div>
+        <div class="field">
+          <label>Specialty / Taxonomy</label>
+          <input id="fSpecialty" type="text" placeholder="e.g. Pharmacy, Cardiology" />
+        </div>
+        <div class="field" style="flex:0 0 160px;">
+          <label>Status</label>
+          <select id="fActive">
+            <option value="">Any</option>
+            <option value="true">Active only</option>
+            <option value="false">Inactive only</option>
+          </select>
+        </div>
+        <div class="field" style="flex:0 0 140px;">
+          <label>Results / page</label>
+          <select id="fCount">
+            <option>25</option>
+            <option selected>50</option>
+            <option>100</option>
+          </select>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div id="verdict"></div>
-  <div class="status" id="status">Enter an NPI or name and click Verify.</div>
-  <div class="grid" id="results"></div>
+  <div class="meta" id="meta"></div>
+  <div id="results"></div>
+  <div id="pager" style="text-align:center; margin:12px 0;"></div>
 </div>
 
-<footer>
-  Live check against the Maine Provider Directory (FHIR).
-</footer>
-
-<div id="detailOverlay" class="overlay"></div>
-<aside id="detailPanel" class="detail-panel" aria-hidden="true">
-  <div class="detail-header">
-    <h2 id="detailTitle">Provider Details</h2>
-    <button id="detailClose">Close</button>
+<!-- Detail flyout -->
+<div class="overlay" id="overlay"></div>
+<aside class="flyout" id="flyout" aria-hidden="true">
+  <div class="flyout-head">
+    <h2 id="flyoutTitle">Details</h2>
+    <button class="flyout-close" id="flyoutClose" aria-label="Close">&times;</button>
   </div>
-  <div id="detailContent"></div>
+  <div class="flyout-body" id="flyoutBody"></div>
 </aside>
 
 <script>
-  const PROXY_BASE = "https://shiny-king-551f.weathered-math-22d4.workers.dev";
+/* ============================================================
+   CONFIG — set this to your Cloudflare Worker proxy base URL.
+   The Worker should forward to:
+   https://maineproviderdirectory.verityanalytics.org/fhir
+   ============================================================ */
+const PROXY_BASE = "https://YOUR-WORKER.workers.dev/fhir"; // <-- CHANGE ME
+// If you ever hit the FHIR server directly (CORS permitting), use:
+// const PROXY_BASE = "https://maineproviderdirectory.verityanalytics.org/fhir";
 
-  // Common NUCC provider taxonomy codes -> readable specialty names.
-  // Falls back to the raw code if a code is not in this list.
-  const TAXONOMY = {
-    "207Q00000X": "Family Medicine",
-    "207R00000X": "Internal Medicine",
-    "208D00000X": "General Practice",
-    "208000000X": "Pediatrics",
-    "207V00000X": "Obstetrics & Gynecology",
-    "207P00000X": "Emergency Medicine",
-    "207N00000X": "Dermatology",
-    "207W00000X": "Ophthalmology",
-    "207X00000X": "Orthopaedic Surgery",
-    "207Y00000X": "Otolaryngology",
-    "208600000X": "Surgery",
-    "208G00000X": "Thoracic Surgery",
-    "207T00000X": "Neurological Surgery",
-    "2084N0400X": "Neurology",
-    "2084P0800X": "Psychiatry",
-    "208100000X": "Physical Medicine & Rehabilitation",
-    "2085R0202X": "Diagnostic Radiology",
-    "207RC0000X": "Cardiovascular Disease",
-    "207RG0100X": "Gastroenterology",
-    "207RH0003X": "Hematology & Oncology",
-    "207RE0101X": "Endocrinology",
-    "207RN0300X": "Nephrology",
-    "207RP1001X": "Pulmonary Disease",
-    "207RR0500X": "Rheumatology",
-    "207RI0200X": "Infectious Disease",
-    "207RA0401X": "Addiction Medicine",
-    "207RA0000X": "Adolescent Medicine",
-    "207RG0300X": "Geriatric Medicine",
-    "207RS0012X": "Sleep Medicine",
-    "2080P0210X": "Pediatric Cardiology",
-    "363L00000X": "Nurse Practitioner",
-    "363A00000X": "Physician Assistant",
-    "364S00000X": "Clinical Nurse Specialist",
-    "152W00000X": "Optometrist",
-    "111N00000X": "Chiropractor",
-    "122300000X": "Dentist",
-    "1223G0001X": "Dentist - General Practice",
-    "204E00000X": "Oral & Maxillofacial Surgery",
-    "1041C0700X": "Clinical Social Worker",
-    "103T00000X": "Psychologist",
-    "261Q00000X": "Clinic / Center",
-    "251G00000X": "Hospice Care, Community Based",
-    "3336C0003X": "Community / Retail Pharmacy",
-    "183500000X": "Pharmacist",
-    "225100000X": "Physical Therapist",
-    "235Z00000X": "Speech-Language Pathologist"
-  };
+let currentType = "both";
+let nextUrls = {};      // { Practitioner: url, Organization: url } for "Load more"
+const cache = {};       // sessionStorage-backed query cache
 
-  const statusEl  = document.getElementById("status");
-  const resultsEl = document.getElementById("results");
-  const verdictEl = document.getElementById("verdict");
-  const searchBtn = document.getElementById("searchBtn");
-  const searchBox = document.getElementById("searchBox");
-  const overlayEl = document.getElementById("detailOverlay");
-  const panelEl   = document.getElementById("detailPanel");
-  const panelTitle = document.getElementById("detailTitle");
-  const panelBody = document.getElementById("detailContent");
-  const panelClose = document.getElementById("detailClose");
+/* ---------- Element refs ---------- */
+const el = id => document.getElementById(id);
+const results = el("results"), meta = el("meta"), pager = el("pager");
 
-  const providerLookup = {};
-  const isNpi = v => /^\d{10}$/.test(v.trim());
+/* ---------- Segmented type control ---------- */
+el("typeSeg").addEventListener("click", e => {
+  if (e.target.tagName !== "BUTTON") return;
+  [...el("typeSeg").children].forEach(b => b.classList.remove("active"));
+  e.target.classList.add("active");
+  currentType = e.target.dataset.type;
+  el("qLabel").textContent = currentType === "Organization"
+    ? "Organization name or NPI"
+    : currentType === "Practitioner" ? "Provider name or NPI" : "Name or NPI";
+});
 
-  async function fhir(pathAndQuery) {
-    const res = await fetch(PROXY_BASE + pathAndQuery, {
-      headers: { "Accept": "application/fhir+json" }
-    });
-    if (!res.ok) throw new Error("FHIR server returned " + res.status);
-    return res.json();
+el("advToggle").addEventListener("click", () => {
+  const a = el("advanced");
+  a.classList.toggle("open");
+  el("advToggle").textContent = (a.classList.contains("open") ? "▴" : "▾") + " Advanced filters";
+});
+
+/* ---------- Debounced live search ---------- */
+let timer;
+el("q").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(runSearch, 350); });
+el("q").addEventListener("keydown", e => { if (e.key === "Enter") { clearTimeout(timer); runSearch(); } });
+el("searchBtn").addEventListener("click", () => { clearTimeout(timer); runSearch(); });
+["fCity","fState","fSpecialty","fActive","fCount"].forEach(id =>
+  el(id).addEventListener("change", runSearch));
+
+/* ---------- Build a FHIR query for one resource type ---------- */
+function buildUrl(resource, term) {
+  const p = new URLSearchParams();
+  const count = el("fCount").value || "50";
+  p.set("_count", count);
+
+  const isNPI = /^\d{10}$/.test(term.trim());
+  if (term.trim()) {
+    if (isNPI) p.set("identifier", term.trim());        // NPI search
+    else p.set("name", term.trim());                    // name search
   }
+  const city = el("fCity").value.trim();
+  const state = el("fState").value.trim();
+  const spec = el("fSpecialty").value.trim();
+  const active = el("fActive").value;
 
-  async function verify() {
-    const q = searchBox.value.trim();
-    if (!q) { statusEl.textContent = "Please enter an NPI or a name."; return; }
+  if (city)  p.set("address-city", city);
+  if (state) p.set("address-state", state);
+  if (active) p.set("active", active);
+  // taxonomy/specialty differs by resource
+  if (spec) {
+    if (resource === "Practitioner") p.set("qualification", spec);
+    else p.set("type", spec);
+  }
+  return `${PROXY_BASE}/${resource}?${p.toString()}`;
+}
 
-    searchBtn.disabled = true;
-    verdictEl.innerHTML = "";
-    resultsEl.innerHTML = "";
-    statusEl.textContent = "Checking the live directory.";
+/* ---------- Main search ---------- */
+async function runSearch() {
+  const term = el("q").value;
+  const hasFilters = el("fCity").value || el("fState").value || el("fSpecialty").value || el("fActive").value;
+  if (!term.trim() && !hasFilters) { results.innerHTML=""; meta.textContent=""; pager.innerHTML=""; return; }
 
-    try {
-      const query = isNpi(q)
-        ? "/Practitioner?identifier=" + encodeURIComponent(q)
-        : "/Practitioner?name=" + encodeURIComponent(q) + "&_count=25";
+  const types = currentType === "both" ? ["Practitioner","Organization"] : [currentType];
+  results.innerHTML = `<div class="state"><div class="spinner"></div>Searching Maine provider directory…</div>`;
+  meta.textContent = ""; pager.innerHTML = ""; nextUrls = {};
 
-      const bundle = await fhir(query);
-      const entries = bundle.entry || [];
-
-      if (entries.length === 0) {
-        showVerdict("bad", "Not Found",
-          "Do not bill on this referral until verified in the portal.");
-        statusEl.textContent = "No match for " + q + ".";
-        return;
-      }
-
-      const providers = entries.map(e => {
-        const r = e.resource || {};
-        const p = {
-          id: r.id || "",
-          name: formatName(r.name),
-          active: r.active !== false,
-          npi: extractNpi(r.identifier),
-          raw: r
-        };
-        if (p.id) providerLookup[p.id] = p;
-        return p;
-      });
-
-      const anyActive = providers.some(p => p.active);
-      if (isNpi(q) && anyActive) {
-        showVerdict("ok", "Enrolled",
-          "This physician is present and active in the current MaineCare directory.");
-      } else if (anyActive) {
-        showVerdict("warn", "Confirm NPI",
-          "Verify the correct NPI on the card(s) below before billing.");
-      } else {
-        showVerdict("bad", "Inactive",
-          "The physician exists in the directory but is marked inactive.");
-      }
-
-      render(providers);
-      statusEl.textContent = "Found " + providers.length + " match(es) for " + q + ".";
-
-    } catch (err) {
-      resultsEl.innerHTML =
-        '<div class="error"><strong>Error checking directory:</strong> ' +
-        escapeHtml(err.message) +
-        '<br>Please verify manually in the portal.</div>';
-      statusEl.textContent = "Check failed.";
-    } finally {
-      searchBtn.disabled = false;
+  try {
+    const all = [];
+    for (const t of types) {
+      const url = buildUrl(t, term);
+      const bundle = await fetchFHIR(url);
+      const entries = (bundle.entry || []).map(e => ({ ...e.resource, __type:t }));
+      all.push(...entries);
+      const next = (bundle.link || []).find(l => l.relation === "next");
+      if (next) nextUrls[t] = next.url;
     }
+    render(all, false);
+  } catch (err) {
+    results.innerHTML = `<div class="error"><b>Lookup failed.</b><br>${escapeHtml(err.message)}<br>
+      <button class="btn ghost" style="margin-top:10px" onclick="runSearch()">Retry</button></div>`;
   }
+}
 
-  function showVerdict(kind, title, sub) {
-    verdictEl.innerHTML =
-      '<div class="verdict ' + kind + '">' + escapeHtml(title) +
-      '<small>' + escapeHtml(sub || "") + '</small></div>';
-  }
-
-  function render(list) {
-    resultsEl.innerHTML = list.map(p =>
-      '<div class="card">' +
-        '<h3>' + escapeHtml(p.name) +
-          '<span class="badge ' + (p.active ? "active" : "inactive") + '">' +
-            (p.active ? "Active" : "Inactive") +
-          '</span>' +
-        '</h3>' +
-        '<div class="meta">' +
-          (p.npi ? "NPI: <strong>" + escapeHtml(p.npi) + "</strong>" : "NPI: -") +
-          (p.id ? " &middot; Directory ID: " + escapeHtml(p.id) : "") +
-        '</div>' +
-        (p.id ? '<button class="details-btn" data-pid="' + escapeHtml(p.id) + '">View Details</button>' : "") +
-      '</div>'
-    ).join("");
-  }
-
-  // ---- Slide-out details panel -------------------------------------------
-
-  function openPanel() {
-    overlayEl.style.display = "block";
-    panelEl.classList.add("open");
-    panelEl.setAttribute("aria-hidden", "false");
-  }
-
-  function closePanel() {
-    overlayEl.style.display = "none";
-    panelEl.classList.remove("open");
-    panelEl.setAttribute("aria-hidden", "true");
-  }
-
-  async function showDetails(practitionerId) {
-    const base = providerLookup[practitionerId];
-    panelTitle.textContent = base ? base.name : "Provider Details";
-    panelBody.innerHTML = '<div class="panel-loading">Loading full provider record.</div>';
-    openPanel();
-
-    try {
-      const practitioner = (base && base.raw) || await fhir("/Practitioner/" + encodeURIComponent(practitionerId));
-
-      let roles = [];
-      try {
-        const roleBundle = await fhir("/PractitionerRole?practitioner=" + encodeURIComponent(practitionerId) + "&_count=50");
-        roles = (roleBundle.entry || []).map(e => e.resource).filter(Boolean);
-      } catch (e) { /* roles optional */ }
-
-      // Collect referenced organization and location IDs from the roles.
-      const orgIds = [];
-      const locIds = [];
-      roles.forEach(r => {
-        const oid = refId(r.organization && r.organization.reference) ||
-                    (isGuid(r.organization && r.organization.display) ? r.organization.display : "");
-        if (oid) orgIds.push(oid);
-        (r.location || []).forEach(l => {
-          const lid = refId(l.reference) || (isGuid(l.display) ? l.display : "");
-          if (lid) locIds.push(lid);
-        });
-      });
-
-      // Resolve them via _id search (with direct-read fallback).
-      const orgMap = await resolveResources("Organization", orgIds);
-      const locMap = await resolveResources("Location", locIds);
-
-      panelBody.innerHTML = buildDetailHtml(practitioner, roles, orgMap, locMap);
-
-    } catch (err) {
-      panelBody.innerHTML =
-        '<div class="detail-section"><div class="error"><strong>Could not load details:</strong> ' +
-        escapeHtml(err.message) + '</div></div>';
+/* ---------- Load more (pagination) ---------- */
+async function loadMore() {
+  pager.innerHTML = `<div class="spinner"></div>`;
+  try {
+    const more = [];
+    const newNext = {};
+    for (const t of Object.keys(nextUrls)) {
+      const proxied = nextUrls[t].replace(/^https?:\/\/[^/]+\/fhir/, PROXY_BASE);
+      const bundle = await fetchFHIR(proxied);
+      more.push(...(bundle.entry||[]).map(e => ({ ...e.resource, __type:t })));
+      const next = (bundle.link||[]).find(l => l.relation==="next");
+      if (next) newNext[t] = next.url;
     }
+    nextUrls = newNext;
+    render(more, true);
+  } catch(err){ pager.innerHTML = `<div class="error">Couldn't load more: ${escapeHtml(err.message)}</div>`; }
+}
+
+/* ---------- Fetch w/ sessionStorage cache ---------- */
+async function fetchFHIR(url) {
+  if (cache[url]) return cache[url];
+  const cached = sessionStorage.getItem(url);
+  if (cached) { cache[url] = JSON.parse(cached); return cache[url]; }
+  const res = await fetch(url, { headers:{ "Accept":"application/fhir+json" } });
+  if (!res.ok) throw new Error(`Server returned ${res.status} ${res.statusText}`);
+  const data = await res.json();
+  cache[url] = data;
+  try { sessionStorage.setItem(url, JSON.stringify(data)); } catch(_){}
+  return data;
+}
+
+/* ---------- Render cards ---------- */
+let store = [];
+function render(items, append) {
+  if (!append) store = [];
+  store.push(...items);
+
+  if (store.length === 0) {
+    results.innerHTML = `<div class="state">No matching providers or organizations found.<br>
+      <small>Try a partial name, remove filters, or switch the search type.</small></div>`;
+    return;
   }
+  const html = store.map((r, i) => card(r, i)).join("");
+  results.innerHTML = html;
+  meta.textContent = `Showing ${store.length} result${store.length!==1?"s":""}` +
+    (Object.keys(nextUrls).length ? " (more available)" : "");
+  pager.innerHTML = Object.keys(nextUrls).length
+    ? `<button class="btn ghost" onclick="loadMore()">Load more results</button>` : "";
+}
 
-  // Resolve a set of resource IDs of a given type into a map keyed by id.
-  async function resolveResources(type, ids) {
-    const unique = Array.from(new Set(ids)).filter(Boolean);
-    const map = {};
-    if (!unique.length) return map;
+function card(r, i) {
+  const isOrg = r.__type === "Organization";
+  const name = displayName(r);
+  const npi = getNPI(r);
+  const active = r.active !== false;
+  const addr = formatAddress(r.address && r.address[0]);
+  return `<div class="card" onclick="openDetail(${i})">
+    <div class="card-top">
+      <div>
+        <span class="type-tag ${isOrg?'type-org':'type-prac'}">${isOrg?'Organization':'Provider'}</span>
+        <h3>${escapeHtml(name)}</h3>
+      </div>
+      <span class="badge ${active?'ok':'bad'}">${active?'✅ Enrolled / Active':'❌ Inactive'}</span>
+    </div>
+    <div class="kv">
+      <span><b>NPI:</b> ${npi?escapeHtml(npi):'—'} ${npi?copyBtn(npi):''}</span>
+      ${addr?`<span><b>Location:</b> ${escapeHtml(addr)}</span>`:''}
+      ${specialty(r)?`<span><b>Specialty:</b> ${escapeHtml(specialty(r))}</span>`:''}
+    </div>
+  </div>`;
+}
 
-    const chunkSize = 20;
-    for (let i = 0; i < unique.length; i += chunkSize) {
-      const chunk = unique.slice(i, i + chunkSize);
-      let resolvedFromSearch = false;
-      try {
-        const bundle = await fhir("/" + type + "?_id=" + encodeURIComponent(chunk.join(",")) + "&_count=" + chunk.length);
-        (bundle.entry || []).forEach(e => {
-          if (e.resource && e.resource.id) { map[e.resource.id] = e.resource; }
-        });
-        resolvedFromSearch = Object.keys(map).length > 0;
-      } catch (e) { /* fall through to direct reads */ }
+/* ---------- Detail flyout ---------- */
+function openDetail(i) {
+  const r = store[i];
+  const isOrg = r.__type === "Organization";
+  el("flyoutTitle").textContent = displayName(r);
+  const rows = [];
+  const add = (label,val)=> val && rows.push(`<div class="detail-row"><b>${label}</b>${escapeHtml(val)} ${label==='NPI'?copyBtn(val):''}</div>`);
 
-      // Direct-read fallback for anything still missing.
-      for (const id of chunk) {
-        if (map[id]) continue;
-        try {
-          const r = await fhir("/" + type + "/" + encodeURIComponent(id));
-          if (r && r.id) map[r.id] = r;
-        } catch (e) { /* skip unresolved */ }
-      }
-    }
-    return map;
+  add("Type", isOrg ? "Organization / Facility" : "Individual Provider");
+  add("NPI", getNPI(r));
+  rows.push(`<div class="detail-row"><b>Enrollment Status</b>
+    <span class="badge ${r.active!==false?'ok':'bad'}">${r.active!==false?'✅ Active / Enrolled':'❌ Inactive'}</span></div>`);
+  add("Specialty / Taxonomy", specialty(r));
+  add("Address", formatAddress(r.address && r.address[0]));
+  add("Phone", getContact(r,"phone"));
+  add("Email", getContact(r,"email"));
+  if (isOrg && r.partOf) add("Part of", r.partOf.display);
+  if (!isOrg && r.qualification) {
+    r.qualification.forEach(q => add("Qualification", q.code && q.code.text));
   }
+  add("FHIR ID", r.id);
 
-  function buildDetailHtml(practitioner, roles, orgMap, locMap) {
-    const npi = extractNpi(practitioner.identifier);
-    const active = practitioner.active === undefined ? "Unknown" : (practitioner.active ? "Yes" : "No");
-    const gender = practitioner.gender || "Not listed";
+  el("flyoutBody").innerHTML = rows.join("") +
+    `<button class="btn print-btn" onclick="window.print()">🖨️ Print this record</button>`;
+  el("overlay").classList.add("open");
+  el("flyout").classList.add("open");
+  el("flyout").setAttribute("aria-hidden","false");
+}
+function closeDetail(){ el("overlay").classList.remove("open");
+  el("flyout").classList.remove("open"); el("flyout").setAttribute("aria-hidden","true"); }
+el("flyoutClose").addEventListener("click", closeDetail);
+el("overlay").addEventListener("click", closeDetail);
+document.addEventListener("keydown", e => { if(e.key==="Escape") closeDetail(); });
 
-    let html = "";
-
-    // Summary
-    html +=
-      '<div class="detail-section">' +
-        '<h3>Summary</h3>' +
-        '<dl class="kv">' +
-          row("Name", formatName(practitioner.name)) +
-          row("NPI", npi || "Not listed") +
-          row("Active", active) +
-          row("Gender", gender) +
-          row("Directory ID", practitioner.id || "Not listed") +
-        '</dl>' +
-      '</div>';
-
-    // Identifiers
-    const identifiers = practitioner.identifier || [];
-    html += '<div class="detail-section"><h3>Identifiers</h3>';
-    if (identifiers.length) {
-      html += identifiers.map(function (i) {
-        const label = (i.type && i.type.text) || (i.system || "Identifier");
-        return '<div class="line"><strong>' + escapeHtml(label) + ':</strong> ' + escapeHtml(i.value || "-") + '</div>';
-      }).join("");
-    } else {
-      html += '<div class="muted">None listed.</div>';
-    }
-    html += '</div>';
-
-    // Contact (telecom)
-    const telecom = practitioner.telecom || [];
-    html += '<div class="detail-section"><h3>Contact</h3>';
-    if (telecom.length) {
-      html += telecom.map(function (t) {
-        return '<div class="line"><strong>' + escapeHtml(t.system || "contact") + ':</strong> ' +
-          escapeHtml(t.value || "-") + (t.use ? ' <span class="muted">(' + escapeHtml(t.use) + ')</span>' : "") + '</div>';
-      }).join("");
-    } else {
-      html += '<div class="muted">No contact details in the directory.</div>';
-    }
-    html += '</div>';
-
-    // Practitioner addresses
-    const addresses = practitioner.address || [];
-    if (addresses.length) {
-      html += '<div class="detail-section"><h3>Addresses</h3>';
-      html += addresses.map(function (a) { return '<div class="line">' + escapeHtml(formatAddress(a)) + '</div>'; }).join("");
-      html += '</div>';
-    }
-
-    // Qualifications
-    const quals = practitioner.qualification || [];
-    if (quals.length) {
-      html += '<div class="detail-section"><h3>Qualifications</h3>';
-      html += quals.map(function (q) {
-        const text = (q.code && (q.code.text || codingText(q.code.coding))) || "Qualification";
-        const issuer = q.issuer && q.issuer.display ? " - " + escapeHtml(q.issuer.display) : "";
-        return '<div class="line">' + escapeHtml(text) + issuer + '</div>';
-      }).join("");
-      html += '</div>';
-    }
-
-    // Roles and specialties
-    html += '<div class="detail-section"><h3>Roles &amp; Specialties</h3>';
-    if (roles.length) {
-      html += roles.map(function (r) {
-        const specialty = specialtyLabel(r.specialty);
-        const orgId = refId(r.organization && r.organization.reference) ||
-                      (isGuid(r.organization && r.organization.display) ? r.organization.display : "");
-        const org = orgId ? orgMap[orgId] : null;
-        const orgName = (org && org.name) ||
-                        (r.organization && r.organization.display && !isGuid(r.organization.display) ? r.organization.display : "") ||
-                        "Not listed";
-        const roleContact = (r.telecom || []).map(function (t) { return (t.system || "contact") + ": " + t.value; }).join("; ") || "None";
-        const period = r.period ? ((r.period.start || "?") + " to " + (r.period.end || "present")) : "Not listed";
-
-        const locNames = (r.location || []).map(function (l) {
-          const lid = refId(l.reference) || (isGuid(l.display) ? l.display : "");
-          const loc = lid ? locMap[lid] : null;
-          return (loc && loc.name) || (l.display && !isGuid(l.display) ? l.display : "") || "";
-        }).filter(Boolean);
-
-        return '<div class="subcard">' +
-          '<h4>' + escapeHtml(specialty) + '</h4>' +
-          '<div class="line"><strong>Organization:</strong> ' + escapeHtml(orgName) + '</div>' +
-          (locNames.length ? '<div class="line"><strong>Locations:</strong> ' + escapeHtml(locNames.join(", ")) + '</div>' : "") +
-          '<div class="line"><strong>Contact:</strong> ' + escapeHtml(roleContact) + '</div>' +
-          '<div class="line"><strong>Active period:</strong> ' + escapeHtml(period) + '</div>' +
-          '<div class="line muted">Role ID: ' + escapeHtml(r.id || "") + '</div>' +
-        '</div>';
-      }).join("");
-    } else {
-      html += '<div class="muted">No PractitionerRole records returned.</div>';
-    }
-    html += '</div>';
-
-    // Organizations
-    const orgList = Object.keys(orgMap).map(function (k) { return orgMap[k]; });
-    html += '<div class="detail-section"><h3>Organizations</h3>';
-    if (orgList.length) {
-      html += orgList.map(function (o) {
-        return '<div class="subcard">' +
-          '<h4>' + escapeHtml(o.name || o.id || "Organization") + '</h4>' +
-          '<div class="line"><strong>NPI:</strong> ' + escapeHtml(extractNpi(o.identifier) || "Not listed") + '</div>' +
-          '<div class="line"><strong>Address:</strong> ' + escapeHtml((o.address && o.address.length ? formatAddress(o.address[0]) : "Not listed")) + '</div>' +
-          '<div class="line"><strong>Contact:</strong> ' + escapeHtml((o.telecom || []).map(function (t) { return (t.system || "contact") + ": " + t.value; }).join("; ") || "None") + '</div>' +
-        '</div>';
-      }).join("");
-    } else {
-      html += '<div class="muted">No related organizations found.</div>';
-    }
-    html += '</div>';
-
-    // Locations
-    const locList = Object.keys(locMap).map(function (k) { return locMap[k]; });
-    html += '<div class="detail-section"><h3>Locations</h3>';
-    if (locList.length) {
-      html += locList.map(function (l) {
-        return '<div class="subcard">' +
-          '<h4>' + escapeHtml(l.name || l.id || "Location") + '</h4>' +
-          '<div class="line"><strong>Address:</strong> ' + escapeHtml(formatAddress(l.address)) + '</div>' +
-          '<div class="line"><strong>Contact:</strong> ' + escapeHtml((l.telecom || []).map(function (t) { return (t.system || "contact") + ": " + t.value; }).join("; ") || "None") + '</div>' +
-        '</div>';
-      }).join("");
-    } else {
-      html += '<div class="muted">No related locations found.</div>';
-    }
-    html += '</div>';
-
-    // Raw data
-    html += '<div class="detail-section">' +
-      '<details class="raw"><summary>Show raw FHIR data</summary>' +
-      '<pre>' + escapeHtml(JSON.stringify({ practitioner: practitioner, roles: roles, organizations: orgList, locations: locList }, null, 2)) + '</pre>' +
-      '</details></div>';
-
-    return html;
+/* ---------- FHIR helpers ---------- */
+function displayName(r){
+  if (r.__type === "Organization") return r.name || "(Unnamed organization)";
+  const n = r.name && r.name[0];
+  if (!n) return "(Unnamed provider)";
+  if (n.text) return n.text;
+  return [ (n.prefix||[]).join(" "), (n.given||[]).join(" "), n.family, (n.suffix||[]).join(" ") ]
+    .filter(Boolean).join(" ");
+}
+function getNPI(r){
+  const id = (r.identifier||[]).find(x =>
+    (x.system||"").includes("us-npi") || (x.type && x.type.text==="NPI") || /npi/i.test(x.system||""));
+  return id ? id.value : ((r.identifier||[])[0]||{}).value;
+}
+function formatAddress(a){
+  if(!a) return "";
+  if(a.text) return a.text;
+  return [ (a.line||[]).join(" "), a.city, a.state, a.postalCode ].filter(Boolean).join(", ");
+}
+function getContact(r,sys){
+  const c = (r.telecom||[]).find(t => t.system===sys);
+  return c ? c.value : "";
+}
+function specialty(r){
+  if (r.__type==="Organization") {
+    const t = (r.type||[])[0];
+    return t && (t.text || (t.coding&&t.coding[0]&&t.coding[0].display)) || "";
   }
-
-  function row(label, value) {
-    return '<dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(value) + '</dd>';
-  }
-
-  // ---- Helpers ------------------------------------------------------------
-
-  // Extract the trailing id from a FHIR reference like "Organization/GUID"
-  // or an absolute URL ".../Organization/GUID". Returns "" if none.
-  function refId(ref) {
-    if (!ref) return "";
-    const parts = String(ref).split("/");
-    return parts[parts.length - 1] || "";
-  }
-
-  function isGuid(v) {
-    return typeof v === "string" && /^[0-9a-fA-F-]{16,}$/.test(v);
-  }
-
-  function specialtyLabel(specialtyArr) {
-    const labels = [];
-    (specialtyArr || []).forEach(function (s) {
-      if (s.text) { labels.push(s.text); return; }
-      (s.coding || []).forEach(function (c) {
-        labels.push(c.display || TAXONOMY[c.code] || c.code);
-      });
-    });
-    return labels.filter(Boolean).join(", ") || "Not listed";
-  }
-
-  function formatName(names) {
-    if (!Array.isArray(names) || !names.length) return "(Unnamed)";
-    const n = names[0];
-    if (n.text) return n.text;
-    const prefix = Array.isArray(n.prefix) ? n.prefix.join(" ") : (n.prefix || "");
-    const given = Array.isArray(n.given) ? n.given.join(" ") : (n.given || "");
-    const suffix = Array.isArray(n.suffix) ? n.suffix.join(" ") : (n.suffix || "");
-    return [prefix, given, n.family, suffix].filter(Boolean).join(" ") || "(Unnamed)";
-  }
-
-  function extractNpi(identifiers) {
-    if (!Array.isArray(identifiers)) return "";
-    const npi = identifiers.find(i =>
-      (i.system && i.system.toLowerCase().includes("npi")) ||
-      (i.type && i.type.text && i.type.text.toLowerCase().includes("npi")) ||
-      (i.value && /^\d{10}$/.test(i.value))
-    );
-    return npi ? npi.value : "";
-  }
-
-  function formatAddress(a) {
-    if (!a) return "Not listed";
-    const line = Array.isArray(a.line) ? a.line.join(", ") : (a.line || "");
-    return [line, a.city, a.state, a.postalCode].filter(Boolean).join(", ") || "Not listed";
-  }
-
-  function codingText(coding) {
-    return (coding || []).map(function (c) { return c.display || c.code; }).filter(Boolean).join(", ");
-  }
-
-  function escapeHtml(s) {
-    return String(s == null ? "" : s)
-      .split("&").join("&amp;")
-      .split("<").join("&lt;")
-      .split(">").join("&gt;")
-      .split('"').join("&quot;");
-  }
-
-  // ---- Events -------------------------------------------------------------
-
-  searchBtn.addEventListener("click", verify);
-  searchBox.addEventListener("keydown", e => { if (e.key === "Enter") verify(); });
-  panelClose.addEventListener("click", closePanel);
-  overlayEl.addEventListener("click", closePanel);
-  document.addEventListener("keydown", e => { if (e.key === "Escape") closePanel(); });
-
-  resultsEl.addEventListener("click", function (e) {
-    const btn = e.target.closest(".details-btn");
-    if (btn) showDetails(btn.getAttribute("data-pid"));
-  });
+  const q = (r.qualification||[])[0];
+  return q && q.code && (q.code.text || (q.code.coding&&q.code.coding[0]&&q.code.coding[0].display)) || "";
+}
+function copyBtn(val){
+  return `<button class="copy" onclick="event.stopPropagation();navigator.clipboard.writeText('${String(val).replace(/'/g,"")}');this.textContent='✓'">Copy</button>`;
+}
+function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g, c =>
+  ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c])); }
 </script>
 </body>
 </html>
