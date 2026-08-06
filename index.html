@@ -117,7 +117,7 @@
 </head>
 <body>
 <header>
-  <h1>MaineCare Provider Enrollment Lookup</h1>
+  <h1>🩺 MaineCare Provider Enrollment Lookup</h1>
   <p>Verify that a referring provider or facility is enrolled with Maine Medicaid before billing.</p>
 </header>
 
@@ -195,9 +195,9 @@
    The Worker should forward to:
    https://maineproviderdirectory.verityanalytics.org/fhir
    ============================================================ */
-const PROXY_BASE = "https://YOUR-WORKER.workers.dev/fhir"; // <-- CHANGE ME
+//const PROXY_BASE = "https://YOUR-WORKER.workers.dev/fhir"; // <-- CHANGE ME
 // If you ever hit the FHIR server directly (CORS permitting), use:
-// const PROXY_BASE = "https://maineproviderdirectory.verityanalytics.org/fhir";
+const PROXY_BASE = "https://maineproviderdirectory.verityanalytics.org/fhir";
 
 let currentType = "both";
 let nextUrls = {};      // { Practitioner: url, Organization: url } for "Load more"
