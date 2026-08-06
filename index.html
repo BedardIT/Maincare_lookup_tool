@@ -73,6 +73,7 @@
   }
   .badge.ok { background:#e7f6ec; color:var(--ok); }
   .badge.bad { background:#fdeceb; color:var(--bad); }
+  .badge.nopr { background:#ddf4ff; color:#0969da; }
   .kv { display:flex; flex-wrap:wrap; gap:6px 22px; margin-top:8px; font-size:.9rem; }
   .kv span b { color:var(--muted); font-weight:600; }
   .copy { border:none; background:#eef2f7; border-radius:6px; cursor:pointer;
@@ -175,6 +176,7 @@
   </div>
 
   <div class="meta" id="meta"></div>
+  <div id="noprsFreshness" style="font-size:.8rem;color:var(--muted);margin:0 4px 10px;"></div>
   <div id="results"></div>
   <div id="pager" style="text-align:center; margin:12px 0;"></div>
 </div>
@@ -279,7 +281,14 @@ async function runSearch() {
       const next = (bundle.link || []).find(l => l.relation === "next");
       if (next) nextUrls[t] = next.url;
     }
-    render(all, false);
+
+    // ---- NOPRS fallback: only if the FHIR directory found nothing ----
+    if (all.length === 0) {
+      const noprs = await noprsFallback();   // from noprs-fallback.js
+      render(noprs, false);
+    } else {
+      render(all, false);
+    }
   } catch (err) {
     results.innerHTML = `<div class="error"><b>Lookup failed.</b><br>${escapeHtml(err.message)}<br>
       <button class="btn ghost" style="margin-top:10px" onclick="runSearch()">Retry</button></div>`;
@@ -348,7 +357,9 @@ function card(r, i) {
         <span class="type-tag ${isOrg?'type-org':'type-prac'}">${isOrg?'Organization':'Provider'}</span>
         <h3>${escapeHtml(name)}</h3>
       </div>
-      <span class="badge ${active?'ok':'bad'}">${active?'✅ Enrolled / Active':'❌ Inactive'}</span>
+      ${r.__noprs
+        ? `<span class="badge nopr">🔵 NOPR — Order / Prescribe / Refer only</span>`
+        : `<span class="badge ${active?'ok':'bad'}">${active?'✅ Enrolled / Active':'❌ Inactive'}</span>`}
     </div>
     <div class="kv">
       <span><b>NPI:</b> ${npi?escapeHtml(npi):'—'} ${npi?copyBtn(npi):''}</span>
@@ -369,7 +380,9 @@ function openDetail(i) {
   add("Type", isOrg ? "Organization / Facility" : "Individual Provider");
   add("NPI", getNPI(r));
   rows.push(`<div class="detail-row"><b>Enrollment Status</b>
-    <span class="badge ${r.active!==false?'ok':'bad'}">${r.active!==false?'✅ Active / Enrolled':'❌ Inactive'}</span></div>`);
+    ${r.__noprs
+      ? `<span class="badge nopr">🔵 NOPR — Order / Prescribe / Refer only</span>`
+      : `<span class="badge ${r.active!==false?'ok':'bad'}">${r.active!==false?'✅ Active / Enrolled':'❌ Inactive'}</span>`}</div>`);
   add("Specialty / Taxonomy", specialty(r));
   add("Address", formatAddress(r.address && r.address[0]));
   add("Phone", getContact(r,"phone"));
@@ -429,5 +442,8 @@ function copyBtn(val){
 function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g, c =>
   ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c])); }
 </script>
+
+<!-- NOPRS fallback (reads ./noprs.json built by the daily GitHub Action) -->
+<script src="noprs-fallback.js"></script>
 </body>
 </html>
