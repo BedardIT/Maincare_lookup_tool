@@ -11,7 +11,7 @@
  *   1. User searches by NPI or name.
  *   2. Your existing FHIR lookup runs first.
  *   3. If FHIR returns nothing, checkNoprs() falls back to noprs.json.
- *   4. renderProviderBadge() shows WHY the provider is (or isn't) valid.
+ *   4. renderProviderBadge() shows WHY the provider is (or isn't) valid. 
  * ===================================================================== */
 
 // Path to the committed file, relative to your app on GitHub Pages.
