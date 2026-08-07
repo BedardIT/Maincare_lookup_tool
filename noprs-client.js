@@ -6,7 +6,7 @@
  *
  * No Cloudflare Worker / proxy is needed for NOPRS — it's a same-origin
  * static file on GitHub Pages, so there's no CORS to deal with.
- *
+ * 
  * Flow:
  *   1. User searches by NPI or name.
  *   2. Your existing FHIR lookup runs first.
