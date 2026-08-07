@@ -9,7 +9,7 @@
  * Why a browser? The report page (mhpviewer.aspx?FID=NORPSPROVREP) is a
  * SharePoint page hosting a Telerik Report Viewer. The provider rows are
  * rendered by JavaScript AFTER load, so a plain fetch() only gets an empty
- * shell. Playwright runs the JS just like Chrome, so the rows appear.
+ * shell. Playwright runs the JS just like Chrome, so the rows appear. 
  * ---------------------------------------------------------------------------
  */
 
